@@ -157,7 +157,7 @@ tbody tr:hover{background:#17181c}
 .dlg-head h2{font-size:16px}
 .dlg-body{padding:18px;overflow:auto;flex:1 1 auto;min-height:0}
 .dlg-actions{position:sticky;bottom:-18px;margin:16px -18px -18px;padding:12px 18px;background:var(--panel);border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;z-index:3}
-.is-bad{border-color:var(--danger)!important;box-shadow:0 0 0 1px var(--danger)!important}
+.is-bad{border-color:var(--danger)!important;box-shadow:0 0 0 1px var(--danger)!important;background:rgba(207,90,78,.1)!important}
 body.modal-on{overflow:hidden}
 .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);background:#efece6;color:#141210;padding:10px 18px;border-radius:2px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:100;max-width:min(560px,90vw)}
 .toast.is-on{opacity:1;transform:translate(-50%,0)}
@@ -292,7 +292,6 @@ function daysBetween(a, b){
   return Math.floor((y - x) / 86400000);
 }
 function nowStr(){ var d = new Date(); return todayStr(d)+' '+pad2(d.getHours())+':'+pad2(d.getMinutes())+':'+pad2(d.getSeconds()); }
-function hhmm(){ var d = new Date(); return pad2(d.getHours())+':'+pad2(d.getMinutes()); }
 function mask(p){ p = String(p||''); return p.length >= 7 ? p.slice(0,3)+'****'+p.slice(-4) : p; }
 function hash(s){
   var h = 2166136261;
@@ -300,6 +299,16 @@ function hash(s){
   return (h >>> 0).toString(16);
 }
 function pwHash(u, p){ return hash('gy|' + String(u).toLowerCase() + '|' + p); }
+function formatDate(d) {
+  if (!d) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  d = d.replace(/\//g, '-');
+  var parts = d.split('-');
+  if (parts.length === 3) {
+    return parts[0] + '-' + pad2(parts[1]) + '-' + pad2(parts[2]);
+  }
+  return todayStr();
+}
 
 var toastTimer = null;
 function toast(msg, kind){
@@ -341,7 +350,7 @@ function badField(el, msg){
   toast(msg, 'bad');
   if(!el) return;
   try{ el.classList.add('is-bad'); el.focus(); }catch(e){}
-  setTimeout(function(){ try{ el.classList.remove('is-bad'); }catch(e){} }, 2000);
+  setTimeout(function(){ try{ el.classList.remove('is-bad'); }catch(e){} }, 2500);
 }
 
 /* ============ 常量与制度 ============ */
@@ -920,37 +929,49 @@ function memberForm(id){
     + '<label class="field">最近活跃<input type="date" name="last_active" required value="' + esc(v.last_active) + '"></label></div>'
     + '<label class="field">备注<input type="text" name="note" maxlength="60" value="' + esc(v.note || '') + '"></label>'
     + '<label class="row" style="font-size:13.5px;color:var(--txt)"><input type="checkbox" name="staff" ' + (v.staff ? 'checked' : '') + ' style="width:auto"> 管理岗（佩戴黑色队标，兑换倍率 ' + DB.config.ratios.staff + '）</label>'
-    + '<p class="hint">' + (m ? '修改姓名或手机号会同步到该会员的登录账号。' : '保存后自动生成账号：' + (DB.members ? '编号自动分配' : '') + '，默认密码 ' + DEFAULT_PW + '。') + '</p>'
-    + '<div class="dlg-actions"><button class="btn" type="button" data-act="close-dlg">取消</button><button class="btn-accent" type="submit">保存</button></div>'
+    + '<p class="hint">' + (m ? '修改姓名或手机号会同步到该会员的登录账号。' : '保存后自动生成账号：编号自动分配，默认密码 ' + DEFAULT_PW + '。') + '</p>'
+    + '<div class="dlg-actions"><button class="btn" type="button" data-act="close-dlg">取消</button><button class="btn-accent" type="button" data-act="save-member">保存</button></div>'
     + '</form>';
   showDlg(m ? '编辑会员 · ' + m.name : '新增会员', html);
 }
 function submitMember(f){
   if(!need('member.write')) return;
-  var id = f.elements.id.value;
-  var name = f.elements.name.value.trim();
-  var phone = f.elements.phone.value.replace(/\D/g,'');
-  if(!name){ badField(f.elements.name, '请填写姓名'); return; }
-  if(phone.length !== 11){ badField(f.elements.phone, '手机号需为 11 位数字，当前 ' + phone.length + ' 位'); return; }
-  var dup = Object.keys(DB.members).some(function(k){ return k !== id && DB.members[k].phone === phone; });
-  if(dup){ badField(f.elements.phone, '该手机号已被其他会员使用'); return; }
-  if(id && DB.members[id]){
-    var m = DB.members[id];
-    m.name = name; m.phone = phone; m.joined = f.elements.joined.value;
-    m.last_active = f.elements.last_active.value; m.staff = f.elements.staff.checked; m.note = f.elements.note.value.trim();
-    logAct('编辑会员', name + '（' + id + '）');
-    toast('会员资料已更新','ok');
-  } else {
-    var nid = uid('m','M');
-    DB.members[nid] = { id:nid, name:name, phone:phone, joined:f.elements.joined.value,
-      last_active:f.elements.last_active.value, staff:f.elements.staff.checked, status:'active', note:f.elements.note.value.trim() };
-    logAct('新增会员', name + '（' + nid + '）');
-    toast('已新增会员，账号 ' + nid + '，默认密码 ' + DEFAULT_PW, 'ok');
+  try {
+    var fd = new FormData(f);
+    var id = String(fd.get('id') || '');
+    var name = String(fd.get('name') || '').trim();
+    var phone = String(fd.get('phone') || '').replace(/\D/g,'');
+    
+    if(!name){ badField(f.querySelector('[name="name"]'), '请填写姓名'); return; }
+    if(phone.length !== 11){ badField(f.querySelector('[name="phone"]'), '手机号需为 11 位数字，当前 ' + phone.length + ' 位'); return; }
+    
+    var dup = Object.keys(DB.members).some(function(k){ return k !== id && DB.members[k].phone === phone; });
+    if(dup){ badField(f.querySelector('[name="phone"]'), '该手机号已被其他会员使用，请更换'); return; }
+
+    var joined = formatDate(String(fd.get('joined') || todayStr()));
+    var lastActive = formatDate(String(fd.get('last_active') || todayStr()));
+    var staff = !!fd.get('staff');
+    var note = String(fd.get('note') || '').trim();
+
+    if(id && DB.members[id]){
+      var m = DB.members[id];
+      m.name = name; m.phone = phone; m.joined = joined; m.last_active = lastActive; m.staff = staff; m.note = note;
+      logAct('编辑会员', name + '（' + id + '）');
+      toast('会员资料已更新','ok');
+    } else {
+      var nid = uid('m','M');
+      DB.members[nid] = { id:nid, name:name, phone:phone, joined:joined, last_active:lastActive, staff:staff, status:'active', note:note };
+      logAct('新增会员', name + '（' + nid + '）');
+      toast('已新增会员，账号 ' + nid + '，默认密码 ' + DEFAULT_PW, 'ok');
+    }
+    syncMemberAccounts();
+    saveDB();
+    closeDlg();
+    render();
+  } catch(err) {
+    console.error('submitMember', err);
+    toast('保存失败：' + err.message, 'bad');
   }
-  syncMemberAccounts();
-  saveDB();
-  closeDlg();
-  render();
 }
 function delMember(id){
   if(!need('member.write')) return;
@@ -1014,7 +1035,7 @@ function vLedger(){
       + '<label class="field">生效日期<input type="date" name="date" value="' + todayStr() + '" ' + (can('points.write') ? '' : 'disabled') + '></label></div>'
       + '<label class="field">原因 / 备注<input type="text" name="note" maxlength="80" placeholder="如：10 月 12 日环湖骑行"></label>'
       + '<div class="form-foot"><p class="hint">' + (can('points.write') ? '累计积分封顶 ' + DB.config.cap + ' 分，超出部分自动截断。' : '提交后由管理员在「审核中心」审批，通过后才计入积分。') + '</p>'
-      + '<button class="btn-accent" type="submit">' + (can('points.write') ? '登记积分' : '提交申请') + '</button></div>'
+      + '<button class="btn-accent" type="button" data-act="save-ledger">' + (can('points.write') ? '登记积分' : '提交申请') + '</button></div>'
       + '</form></section>';
   }
 
@@ -1028,29 +1049,36 @@ function vLedger(){
     + (trs || '<tr><td colspan="6" class="empty">暂无流水</td></tr>') + '</tbody></table></div></section>';
 }
 function submitLedger(f){
-  var mid = f.elements.member.value;
-  var m = DB.members[mid];
-  if(!m){ toast('请选择会员','bad'); return; }
-  var preset = f.elements.preset;
-  var item = preset.options[preset.selectedIndex] ? preset.options[preset.selectedIndex].getAttribute('data-label') : '积分调整';
-  var points = num(f.elements.points.value);
-  if(!points){ toast('分值不能为 0','bad'); return; }
-  var note = f.elements.note.value.trim();
+  try {
+    var fd = new FormData(f);
+    var mid = String(fd.get('member') || '');
+    var m = DB.members[mid];
+    if(!m){ toast('请选择会员','bad'); return; }
+    var preset = f.querySelector('[name="preset"]');
+    var item = (preset && preset.options[preset.selectedIndex]) ? preset.options[preset.selectedIndex].getAttribute('data-label') : '积分调整';
+    var points = num(fd.get('points'));
+    if(!points){ toast('分值不能为 0','bad'); return; }
+    var note = String(fd.get('note') || '').trim();
+    var date = formatDate(String(fd.get('date') || todayStr()));
 
-  if(can('points.write')){
-    var applied = applyPoints(mid, item, points, f.elements.date.value || todayStr(), note);
-    logAct(points >= 0 ? '登记积分' : '扣减积分', m.name + ' ' + (points > 0 ? '+' : '') + p1(points) + ' 分 · ' + item + (applied !== points ? '（封顶截断为 ' + p1(applied) + '）' : ''));
-    saveDB(); render();
-    toast(applied !== points ? '已登记，按封顶截断为 ' + p1(applied) + ' 分' : '已登记 ' + p1(applied) + ' 分', 'ok');
-  } else if(can('points.request')){
-    DB.approvals.unshift({ id:uid('a','A'), type:'points', member_id:mid, member_name:m.name,
-      item:item, delta:points, reason:note || item, applicant:SESS.u, applied_at:nowStr(),
-      status:'pending', reviewer:'', reviewed_at:'', review_note:'' });
-    logAct('提交积分调整申请', m.name + ' ' + (points > 0 ? '+' : '') + p1(points) + ' 分 · ' + item);
-    saveDB(); render();
-    toast('已提交审批，管理员通过后生效','ok');
-  } else {
-    toast('当前角色无此权限','bad');
+    if(can('points.write')){
+      var applied = applyPoints(mid, item, points, date, note);
+      logAct(points >= 0 ? '登记积分' : '扣减积分', m.name + ' ' + (points > 0 ? '+' : '') + p1(points) + ' 分 · ' + item + (applied !== points ? '（封顶截断为 ' + p1(applied) + '）' : ''));
+      saveDB(); render();
+      toast(applied !== points ? '已登记，按封顶截断为 ' + p1(applied) + ' 分' : '已登记 ' + p1(applied) + ' 分', 'ok');
+    } else if(can('points.request')){
+      DB.approvals.unshift({ id:uid('a','A'), type:'points', member_id:mid, member_name:m.name,
+        item:item, delta:points, reason:note || item, applicant:SESS.u, applied_at:nowStr(),
+        status:'pending', reviewer:'', reviewed_at:'', review_note:'' });
+      logAct('提交积分调整申请', m.name + ' ' + (points > 0 ? '+' : '') + p1(points) + ' 分 · ' + item);
+      saveDB(); render();
+      toast('已提交审批，管理员通过后生效','ok');
+    } else {
+      toast('当前角色无此权限','bad');
+    }
+  } catch(err) {
+    console.error('submitLedger', err);
+    toast('操作失败：' + err.message, 'bad');
   }
 }
 function applyPoints(mid, item, points, date, note, via){
@@ -1074,29 +1102,36 @@ function pointsAdjForm(id){
     + '<label class="field">原因<input type="text" name="reason" required maxlength="60" placeholder="如：补录 10 月 5 日活动积分"></label>'
     + (isApprove ? '<p class="hint">提交后进入管理员审批，通过后才会计入积分。</p>' : '')
     + '<div class="dlg-actions"><button class="btn" type="button" data-act="close-dlg">取消</button>'
-    + '<button class="btn-accent" type="submit">' + (isApprove ? '提交审批' : '确认调整') + '</button></div></form>';
+    + '<button class="btn-accent" type="button" data-act="save-adj">' + (isApprove ? '提交审批' : '确认调整') + '</button></div></form>';
   showDlg(isApprove ? '申请调整积分' : '调整积分', html);
 }
 function submitAdj(f){
-  var id = f.elements.id.value;
-  var m = DB.members[id];
-  var delta = num(f.elements.delta.value);
-  var reason = f.elements.reason.value.trim();
-  if(!delta){ toast('分值不能为 0','bad'); return; }
-  if(can('points.write')){
-    var applied = applyPoints(id, reason || '手工调整', delta, todayStr(), reason);
-    logAct('调整积分', m.name + ' ' + (delta > 0 ? '+' : '') + p1(delta) + ' 分 · ' + reason);
-    saveDB(); closeDlg(); render();
-    toast('已调整 ' + p1(applied) + ' 分','ok');
-  } else if(can('points.request')){
-    DB.approvals.unshift({ id:uid('a','A'), type:'points', member_id:id, member_name:m.name,
-      item:reason || '手工调整', delta:delta, reason:reason, applicant:SESS.u, applied_at:nowStr(),
-      status:'pending', reviewer:'', reviewed_at:'', review_note:'' });
-    logAct('提交积分调整申请', m.name + ' ' + (delta > 0 ? '+' : '') + p1(delta) + ' 分 · ' + reason);
-    saveDB(); closeDlg(); render();
-    toast('已提交审批','ok');
-  } else {
-    toast('当前角色无此权限','bad');
+  try {
+    var fd = new FormData(f);
+    var id = String(fd.get('id') || '');
+    var m = DB.members[id];
+    if(!m){ toast('会员不存在','bad'); return; }
+    var delta = num(fd.get('delta'));
+    var reason = String(fd.get('reason') || '').trim();
+    if(!delta){ toast('分值不能为 0','bad'); return; }
+    if(can('points.write')){
+      var applied = applyPoints(id, reason || '手工调整', delta, todayStr(), reason);
+      logAct('调整积分', m.name + ' ' + (delta > 0 ? '+' : '') + p1(delta) + ' 分 · ' + reason);
+      saveDB(); closeDlg(); render();
+      toast('已调整 ' + p1(applied) + ' 分','ok');
+    } else if(can('points.request')){
+      DB.approvals.unshift({ id:uid('a','A'), type:'points', member_id:id, member_name:m.name,
+        item:reason || '手工调整', delta:delta, reason:reason, applicant:SESS.u, applied_at:nowStr(),
+        status:'pending', reviewer:'', reviewed_at:'', review_note:'' });
+      logAct('提交积分调整申请', m.name + ' ' + (delta > 0 ? '+' : '') + p1(delta) + ' 分 · ' + reason);
+      saveDB(); closeDlg(); render();
+      toast('已提交审批','ok');
+    } else {
+      toast('当前角色无此权限','bad');
+    }
+  } catch(err) {
+    console.error('submitAdj', err);
+    toast('操作失败：' + err.message, 'bad');
   }
 }
 
@@ -1133,7 +1168,7 @@ function vRedeem(){
       + '<label class="field">消耗积分<input type="number" name="points" id="redeemPoints" step="1" min="1" required value="100"></label></div>'
       + '<label class="field">备注<input type="text" name="note" maxlength="60" placeholder="如：10 月活动奖励"></label>'
       + '<div class="form-foot"><p class="hint" id="redeemCalc">按所选物品积分区间填写，折算金额随会员等级倍率计算。</p>'
-      + '<button class="btn-accent" type="submit">提交申请</button></div></form></section>';
+      + '<button class="btn-accent" type="button" data-act="save-redeem">提交申请</button></div></form></section>';
   }
 
   var list = DB.redemptions.slice().sort(function(a,b){ return a.created_at < b.created_at ? 1 : -1; });
@@ -1161,25 +1196,31 @@ function vRedeem(){
     + (rows || '<tr><td colspan="8" class="empty">暂无申请</td></tr>') + '</tbody></table></div></section>';
 }
 function submitRedeem(f){
-  if(!need('redeem.create')) return;
-  var st = statsOf(DB.members[UI.redeemMember]);
-  if(!st){ toast('请选择会员','bad'); return; }
-  var gid = f.elements.gift.value;
-  var g = DB.gifts.filter(function(x){ return x.id === gid; })[0];
-  if(!g){ toast('请选择可兑物品','bad'); return; }
-  var pts = num(f.elements.points.value);
-  if(pts <= 0){ toast('积分需大于 0','bad'); return; }
-  if(pts < g.min || pts > g.max){ toast('积分需在 ' + g.min + '~' + g.max + ' 之间','bad'); return; }
-  if(!st.eligible){ toast('该会员不具备兑换资格：' + st.reasons.join('；'),'bad'); return; }
-  if(st.redeemed + st.pending + pts > DB.config.max_redeem_points){ toast('超出累计兑换上限 ' + DB.config.max_redeem_points + ' 分','bad'); return; }
-  if(g.stock <= 0){ toast('该物品库存不足','bad'); return; }
-  var amount = Math.round(pts * st.ratio * 100) / 100;
-  DB.redemptions.push({ id:uid('r','R'), member_id:st.m.id, member_name:st.m.name, gift_id:g.id, gift_name:g.cat + ' · ' + g.name,
-    points:pts, amount:amount, status:'pending', created_at:todayStr(), created_by:SESS.u,
-    approved_by:'', approved_at:'', issued_at:'', note:f.elements.note.value.trim() });
-  logAct('提交兑换申请', st.m.name + ' ' + g.name + ' ' + p1(pts) + ' 分');
-  saveDB(); render();
-  toast('已提交，等待核定','ok');
+  try {
+    if(!need('redeem.create')) return;
+    var fd = new FormData(f);
+    var st = statsOf(DB.members[UI.redeemMember]);
+    if(!st){ toast('请选择会员','bad'); return; }
+    var gid = String(fd.get('gift') || '');
+    var g = DB.gifts.filter(function(x){ return x.id === gid; })[0];
+    if(!g){ toast('请选择可兑物品','bad'); return; }
+    var pts = num(fd.get('points'));
+    if(pts <= 0){ toast('积分需大于 0','bad'); return; }
+    if(pts < g.min || pts > g.max){ toast('积分需在 ' + g.min + '~' + g.max + ' 之间','bad'); return; }
+    if(!st.eligible){ toast('该会员不具备兑换资格：' + st.reasons.join('；'),'bad'); return; }
+    if(st.redeemed + st.pending + pts > DB.config.max_redeem_points){ toast('超出累计兑换上限 ' + DB.config.max_redeem_points + ' 分','bad'); return; }
+    if(g.stock <= 0){ toast('该物品库存不足','bad'); return; }
+    var amount = Math.round(pts * st.ratio * 100) / 100;
+    DB.redemptions.push({ id:uid('r','R'), member_id:st.m.id, member_name:st.m.name, gift_id:g.id, gift_name:g.cat + ' · ' + g.name,
+      points:pts, amount:amount, status:'pending', created_at:todayStr(), created_by:SESS.u,
+      approved_by:'', approved_at:'', issued_at:'', note:String(fd.get('note') || '').trim() });
+    logAct('提交兑换申请', st.m.name + ' ' + g.name + ' ' + p1(pts) + ' 分');
+    saveDB(); render();
+    toast('已提交，等待核定','ok');
+  } catch(err) {
+    console.error('submitRedeem', err);
+    toast('提交失败：' + err.message, 'bad');
+  }
 }
 function rdFind(id){ return DB.redemptions.filter(function(r){ return r.id === id; })[0]; }
 function approveRd(id){
@@ -1260,34 +1301,43 @@ function giftForm(id){
     + (can('gift.stock') ? '<label class="field">初始库存<input type="number" name="stock" step="1" min="0" required value="' + v.stock + '"></label>' : '')
     + '</div>'
     + '<label class="field">说明<input type="text" name="note" maxlength="40" value="' + esc(v.note || '') + '"></label>'
-    + '<div class="dlg-actions"><button class="btn" type="button" data-act="close-dlg">取消</button><button class="btn-accent" type="submit">保存</button></div></form>';
+    + '<div class="dlg-actions"><button class="btn" type="button" data-act="close-dlg">取消</button><button class="btn-accent" type="button" data-act="save-gift">保存</button></div></form>';
   showDlg(g ? '编辑物品' : '新增物品', html);
 }
 function submitGift(f){
   if(!need('gift.write')) return;
-  var id = f.elements.id.value;
-  var min = num(f.elements.min.value), max = num(f.elements.max.value);
-  if(!f.elements.name.value.trim()){ badField(f.elements.name, '请填写物品名称'); return; }
-  if(!f.elements.cat.value.trim()){ badField(f.elements.cat, '请填写物品类别'); return; }
-  if(min <= 0 || max <= 0){ badField(f.elements.min, '最低 / 最高积分需为大于 0 的数字'); return; }
-  if(min > max){ badField(f.elements.max, '最高积分不能小于最低积分（' + min + '~' + max + '）'); return; }
-  var stockEl = f.elements.stock;
-  if(id){
-    var g = DB.gifts.filter(function(x){ return x.id === id; })[0];
-    if(!g){ toast('物品不存在','bad'); return; }
-    g.cat = f.elements.cat.value.trim(); g.name = f.elements.name.value.trim();
-    g.min = min; g.max = max; g.note = f.elements.note.value.trim();
-    if(stockEl && can('gift.stock')){ g.stock = Math.max(0, num(stockEl.value)); }
-    logAct('编辑物品', g.cat + ' · ' + g.name + '（' + min + '~' + max + ' 分，库存 ' + g.stock + '）');
-    toast('物品已更新','ok');
-  } else {
-    var ng = { id:uid('g','G'), cat:f.elements.cat.value.trim(), name:f.elements.name.value.trim(),
-      min:min, max:max, stock:stockEl ? Math.max(0, num(stockEl.value)) : 0, note:f.elements.note.value.trim() };
-    DB.gifts.push(ng);
-    logAct('新增物品', ng.cat + ' · ' + ng.name + '（' + min + '~' + max + ' 分，库存 ' + ng.stock + '）');
-    toast('已新增物品','ok');
+  try {
+    var fd = new FormData(f);
+    var id = String(fd.get('id') || '');
+    var cat = String(fd.get('cat') || '').trim();
+    var name = String(fd.get('name') || '').trim();
+    var min = num(fd.get('min'));
+    var max = num(fd.get('max'));
+    var note = String(fd.get('note') || '').trim();
+    if(!name){ badField(f.querySelector('[name="name"]'), '请填写物品名称'); return; }
+    if(!cat){ badField(f.querySelector('[name="cat"]'), '请填写物品类别'); return; }
+    if(min <= 0 || max <= 0){ badField(f.querySelector('[name="min"]'), '最低 / 最高积分需为大于 0 的数字'); return; }
+    if(min > max){ badField(f.querySelector('[name="max"]'), '最高积分不能小于最低积分（' + min + '~' + max + '）'); return; }
+    var stockVal = fd.get('stock');
+    if(id){
+      var g = DB.gifts.filter(function(x){ return x.id === id; })[0];
+      if(!g){ toast('物品不存在','bad'); return; }
+      g.cat = cat; g.name = name; g.min = min; g.max = max; g.note = note;
+      if(stockVal !== null && can('gift.stock')){ g.stock = Math.max(0, num(stockVal)); }
+      logAct('编辑物品', g.cat + ' · ' + g.name + '（' + min + '~' + max + ' 分，库存 ' + g.stock + '）');
+      toast('物品已更新','ok');
+    } else {
+      var ng = { id:uid('g','G'), cat:cat, name:name, min:min, max:max,
+        stock: (stockVal !== null && can('gift.stock')) ? Math.max(0, num(stockVal)) : 0, note:note };
+      DB.gifts.push(ng);
+      logAct('新增物品', ng.cat + ' · ' + ng.name + '（' + min + '~' + max + ' 分，库存 ' + ng.stock + '）');
+      toast('已新增物品','ok');
+    }
+    saveDB(); closeDlg(); render();
+  } catch(err) {
+    console.error('submitGift', err);
+    toast('保存失败：' + err.message, 'bad');
   }
-  saveDB(); closeDlg(); render();
 }
 function delGift(id){
   if(!need('gift.write')) return;
@@ -1309,21 +1359,27 @@ function stockForm(id){
     + '<p class="hint">' + esc(g.cat + ' · ' + g.name) + ' 当前库存 <b class="mono">' + g.stock + '</b> 件。</p>'
     + '<label class="field">入库数量（正数入库，负数出库）<input type="number" name="n" step="1" required value="10"></label>'
     + '<label class="field">或直接设为<input type="number" name="abs" step="1" min="0" placeholder="留空则按入库数量计算"></label>'
-    + '<div class="dlg-actions"><button class="btn" type="button" data-act="close-dlg">取消</button><button class="btn-accent" type="submit">确认</button></div></form>';
+    + '<div class="dlg-actions"><button class="btn" type="button" data-act="close-dlg">取消</button><button class="btn-accent" type="button" data-act="save-stock">确认</button></div></form>';
   showDlg('库存计数 · ' + g.name, html);
 }
 function submitStock(f){
   if(!need('gift.stock')) return;
-  var id = f.elements.id.value;
-  var g = DB.gifts.filter(function(x){ return x.id === id; })[0];
-  if(!g) return;
-  var abs = f.elements.abs.value;
-  var before = g.stock;
-  if(String(abs).trim() !== ''){ g.stock = Math.max(0, num(abs)); }
-  else { g.stock = Math.max(0, g.stock + num(f.elements.n.value)); }
-  logAct('库存调整', g.cat + ' · ' + g.name + '：' + before + ' → ' + g.stock);
-  saveDB(); closeDlg(); render();
-  toast('库存已更新为 ' + g.stock + ' 件','ok');
+  try {
+    var fd = new FormData(f);
+    var id = String(fd.get('id') || '');
+    var g = DB.gifts.filter(function(x){ return x.id === id; })[0];
+    if(!g) return;
+    var abs = fd.get('abs');
+    var before = g.stock;
+    if(abs !== null && String(abs).trim() !== ''){ g.stock = Math.max(0, num(abs)); }
+    else { g.stock = Math.max(0, g.stock + num(fd.get('n'))); }
+    logAct('库存调整', g.cat + ' · ' + g.name + '：' + before + ' → ' + g.stock);
+    saveDB(); closeDlg(); render();
+    toast('库存已更新为 ' + g.stock + ' 件','ok');
+  } catch(err) {
+    console.error('submitStock', err);
+    toast('操作失败：' + err.message, 'bad');
+  }
 }
 
 /* ============ 审核中心 ============ */
@@ -1477,7 +1533,7 @@ function vRules(){
       + '<label class="field">VIP 倍率<input type="number" name="r_vip" value="' + c.ratios.vip + '" step="0.05" min="0"></label>'
       + '<label class="field">SVIP 倍率<input type="number" name="r_svip" value="' + c.ratios.svip + '" step="0.05" min="0"></label>'
       + '<label class="field">管理岗倍率<input type="number" name="r_staff" value="' + c.ratios.staff + '" step="0.05" min="0"></label>'
-      + '</div><div class="row" style="justify-content:flex-end"><button class="btn-accent" type="submit">保存参数</button></div></form></section>';
+      + '</div><div class="row" style="justify-content:flex-end"><button class="btn-accent" type="button" data-act="save-cfg">保存参数</button></div></form></section>';
   }
 
   return vhead('等级规则', '积分兑换总则、等级划分、计分口径与管理细则', '<span class="count">制度版本 v1.0</span>')
@@ -1509,22 +1565,28 @@ function vRules(){
 }
 function submitCfg(f){
   if(!need('points.approve')) return;
-  var c = DB.config;
-  c.club = f.elements.club.value.trim() || c.club;
-  c.cap = num(f.elements.cap.value);
-  c.min_redeem = num(f.elements.min_redeem.value);
-  c.hold_months = num(f.elements.hold_months.value);
-  c.max_redeem_points = num(f.elements.max_redeem_points.value);
-  c.point_value = num(f.elements.point_value.value);
-  c.dive_warn = num(f.elements.dive_warn.value);
-  c.dive_kick = num(f.elements.dive_kick.value);
-  c.ratios = { member:num(f.elements.r_member.value), normal:num(f.elements.r_normal.value),
-    vip:num(f.elements.r_vip.value), svip:num(f.elements.r_svip.value), staff:num(f.elements.r_staff.value) };
-  logAct('修改规则参数', '封顶 ' + c.cap + ' 分，资格线 ' + c.min_redeem + ' 分，持有 ' + c.hold_months + ' 个月');
-  saveDB();
-  $('hdrClub').textContent = c.club;
-  render();
-  toast('规则参数已保存','ok');
+  try {
+    var fd = new FormData(f);
+    var c = DB.config;
+    c.club = String(fd.get('club') || '').trim() || c.club;
+    c.cap = num(fd.get('cap'));
+    c.min_redeem = num(fd.get('min_redeem'));
+    c.hold_months = num(fd.get('hold_months'));
+    c.max_redeem_points = num(fd.get('max_redeem_points'));
+    c.point_value = num(fd.get('point_value'));
+    c.dive_warn = num(fd.get('dive_warn'));
+    c.dive_kick = num(fd.get('dive_kick'));
+    c.ratios = { member:num(fd.get('r_member')), normal:num(fd.get('r_normal')),
+      vip:num(fd.get('r_vip')), svip:num(fd.get('r_svip')), staff:num(fd.get('r_staff')) };
+    logAct('修改规则参数', '封顶 ' + c.cap + ' 分，资格线 ' + c.min_redeem + ' 分，持有 ' + c.hold_months + ' 个月');
+    saveDB();
+    $('hdrClub').textContent = c.club;
+    render();
+    toast('规则参数已保存','ok');
+  } catch(err) {
+    console.error('submitCfg', err);
+    toast('保存失败：' + err.message, 'bad');
+  }
 }
 
 /* ============ 账号 ============ */
@@ -1534,7 +1596,6 @@ function vAccounts(){
     return order[a.role] - order[b.role] || (a.u < b.u ? -1 : 1);
   });
   var rows = list.map(function(a){
-    var p = a.role === 'member' ? (DB.members[a.member_id] ? '正常' : '会员已删除') : '正常';
     return '<tr><td class="mono">' + esc(a.u) + '</td><td>' + esc(a.name) + '</td>'
       + '<td><span class="role-chip ' + a.role + '">' + ROLE_NAME[a.role] + '</span></td>'
       + '<td class="mono dim">' + esc(mask(a.phone) || '—') + '</td>'
@@ -1592,22 +1653,29 @@ function accPhone(u){
     + '<p class="hint">账号 ' + esc(u) + ' 当前绑定手机号：' + esc(mask(a.phone) || '未绑定') + '</p>'
     + '<label class="field">新手机号<input type="tel" name="phone" required inputmode="numeric" autocomplete="tel" maxlength="13" value="' + esc(a.phone) + '"></label>'
     + '<p class="hint">修改后可用于验证码找回密码。会员账号的手机号与会员资料同步，请在「会员」中修改。</p>'
-    + '<div class="dlg-actions"><button class="btn" type="button" data-act="close-dlg">取消</button><button class="btn-accent" type="submit">保存</button></div></form>';
+    + '<div class="dlg-actions"><button class="btn" type="button" data-act="close-dlg">取消</button><button class="btn-accent" type="button" data-act="save-phone">保存</button></div></form>';
   showDlg('修改绑定手机号', html);
 }
 function submitPhone(f){
   if(!need('account.manage')) return;
-  var u = f.elements.u.value;
-  var a = ACCS[u];
-  var phone = f.elements.phone.value.replace(/\D/g,'');
-  if(!a) return;
-  if(phone.length !== 11){ toast('手机号需为 11 位','bad'); return; }
-  if(a.role === 'member'){ toast('会员手机号请到「会员」中修改，会自动同步','bad'); return; }
-  a.phone = phone; a.updated = todayStr();
-  logAct('修改绑定手机号', u + ' → ' + mask(phone));
-  saveAccs(); closeDlg(); render();
-  toast('手机号已更新','ok');
+  try {
+    var fd = new FormData(f);
+    var u = String(fd.get('u') || '');
+    var a = ACCS[u];
+    if(!a) return;
+    var phone = String(fd.get('phone') || '').replace(/\D/g,'');
+    if(phone.length !== 11){ toast('手机号需为 11 位','bad'); return; }
+    if(a.role === 'member'){ toast('会员手机号请到「会员」中修改，会自动同步','bad'); return; }
+    a.phone = phone; a.updated = todayStr();
+    logAct('修改绑定手机号', u + ' → ' + mask(phone));
+    saveAccs(); closeDlg(); render();
+    toast('手机号已更新','ok');
+  } catch(err) {
+    console.error('submitPhone', err);
+    toast('保存失败：' + err.message, 'bad');
+  }
 }
+
 /* ============ 流水定期清理 ============ */
 function purgeCutoff(){
   var months = Math.max(1, num(DB.config.purge_months) || 12);
@@ -1688,7 +1756,7 @@ function vPurgePanel(){
       + '<label class="field">检查间隔（天）<input type="number" name="purge_gap" value="' + (c.purge_gap || 30) + '" min="1" max="365" step="1"></label>'
       + '</div><div class="row" style="justify-content:flex-end">'
       + (due ? '<button class="btn" type="button" data-act="purge-now">立即清理 ' + due + ' 条</button>' : '')
-      + '<button class="btn-accent" type="submit">保存设置</button></div></form>';
+      + '<button class="btn-accent" type="button" data-act="save-purge">保存设置</button></div></form>';
   }
   return '<section class="panel"><div class="phead"><h3>积分流水维护</h3><span class="count">' + (c.purge_on ? '自动清理已开启' : '自动清理已关闭') + '</span></div>'
     + '<div class="notice">保留最近 <b>' + (c.purge_months || 12) + '</b> 个月明细，超期部分在下次登录时自动清除；清除前会按会员生成一条「历史积分结转」，累计积分与等级不受影响。上次清理：' + esc(mt.last_purge || '从未') + (mt.last_purge ? '（' + esc(mt.last_mode || '') + ' ' + (mt.last_count || 0) + ' 条）' : '') + '。</div>'
@@ -1699,13 +1767,19 @@ function vPurgePanel(){
 }
 function submitPurge(f){
   if(!need('ledger.purge')) return;
-  var c = DB.config;
-  c.purge_on = String(f.elements.purge_on.value) === '1';
-  c.purge_months = Math.max(1, Math.round(num(f.elements.purge_months.value) || 12));
-  c.purge_gap = Math.max(1, Math.round(num(f.elements.purge_gap.value) || 30));
-  logAct('修改流水清理设置', (c.purge_on ? '开启' : '关闭') + '，保留 ' + c.purge_months + ' 个月，每 ' + c.purge_gap + ' 天检查');
-  saveDB(); render();
-  toast('清理设置已保存','ok');
+  try {
+    var fd = new FormData(f);
+    var c = DB.config;
+    c.purge_on = String(fd.get('purge_on')) === '1';
+    c.purge_months = Math.max(1, Math.round(num(fd.get('purge_months')) || 12));
+    c.purge_gap = Math.max(1, Math.round(num(fd.get('purge_gap')) || 30));
+    logAct('修改流水清理设置', (c.purge_on ? '开启' : '关闭') + '，保留 ' + c.purge_months + ' 个月，每 ' + c.purge_gap + ' 天检查');
+    saveDB(); render();
+    toast('清理设置已保存','ok');
+  } catch(err) {
+    console.error('submitPurge', err);
+    toast('保存失败：' + err.message, 'bad');
+  }
 }
 
 /* ============ 表格导入 ============ */
@@ -1943,54 +2017,59 @@ function impApply(kind){
   if(!need(perm)) return;
   var plan = IMP.plan || [];
   if(!plan.length){ toast('没有可导入的数据','bad'); return; }
-  var add = 0, up = 0, pts = 0, capped = 0;
-  if(kind === 'member'){
-    plan.forEach(function(p){
-      if(p.mode === 'add'){
-        var id = uid('m','M');
-        DB.members[id] = { id:id, name:p.name, phone:p.phone, joined:p.joined, last_active:todayStr(),
-          staff:p.staff, status:p.status, note:p.note };
+  try {
+    var add = 0, up = 0, pts = 0, capped = 0;
+    if(kind === 'member'){
+      plan.forEach(function(p){
+        if(p.mode === 'add'){
+          var id = uid('m','M');
+          DB.members[id] = { id:id, name:p.name, phone:p.phone, joined:p.joined, last_active:todayStr(),
+            staff:p.staff, status:p.status, note:p.note };
+          add++;
+        } else {
+          var m = DB.members[p.id];
+          if(!m) return;
+          m.name = p.name;
+          if(p.phone){ m.phone = p.phone; }
+          if(p.joined){ m.joined = p.joined; }
+          m.staff = p.staff; m.status = p.status;
+          if(p.note){ m.note = p.note; }
+          up++;
+        }
+      });
+      syncMemberAccounts();
+    } else if(kind === 'gift'){
+      plan.forEach(function(p){
+        if(p.mode === 'add'){
+          DB.gifts.push({ id:uid('g','G'), cat:p.cat, name:p.name, min:p.min, max:p.max,
+            stock:(can('gift.stock') && p.stock !== null) ? p.stock : 0, note:p.note });
+          add++;
+        } else {
+          var g = DB.gifts.filter(function(x){ return x.id === p.id; })[0];
+          if(!g) return;
+          g.min = p.min; g.max = p.max;
+          if(p.note){ g.note = p.note; }
+          if(can('gift.stock') && p.stock !== null){ g.stock = p.stock; }
+          up++;
+        }
+      });
+    } else {
+      plan.forEach(function(p){
+        var applied = applyPoints(p.id, p.item, p.points, p.date, p.note, '表格导入');
         add++;
-      } else {
-        var m = DB.members[p.id];
-        if(!m) return;
-        m.name = p.name;
-        if(p.phone){ m.phone = p.phone; }
-        if(p.joined){ m.joined = p.joined; }
-        m.staff = p.staff; m.status = p.status;
-        if(p.note){ m.note = p.note; }
-        up++;
-      }
-    });
-    syncMemberAccounts();
-  } else if(kind === 'gift'){
-    plan.forEach(function(p){
-      if(p.mode === 'add'){
-        DB.gifts.push({ id:uid('g','G'), cat:p.cat, name:p.name, min:p.min, max:p.max,
-          stock:(can('gift.stock') && p.stock !== null) ? p.stock : 0, note:p.note });
-        add++;
-      } else {
-        var g = DB.gifts.filter(function(x){ return x.id === p.id; })[0];
-        if(!g) return;
-        g.min = p.min; g.max = p.max;
-        if(p.note){ g.note = p.note; }
-        if(can('gift.stock') && p.stock !== null){ g.stock = p.stock; }
-        up++;
-      }
-    });
-  } else {
-    plan.forEach(function(p){
-      var applied = applyPoints(p.id, p.item, p.points, p.date, p.note, '表格导入');
-      add++;
-      if(applied){ pts += applied; if(Math.abs(applied - p.points) > 0.001){ capped++; } }
-    });
+        if(applied){ pts += applied; if(Math.abs(applied - p.points) > 0.001){ capped++; } }
+      });
+    }
+    logAct('表格导入', IMP_DEF[kind].title + '：新增 ' + add + ' 条' + (up ? '，更新 ' + up + ' 条' : '') + (kind === 'ledger' ? '，合计 ' + p1(pts) + ' 分' : ''));
+    saveDB(); closeDlg(); render();
+    IMP.plan = null;
+    toast(kind === 'ledger'
+      ? ('已导入 ' + add + ' 条流水，合计 ' + p1(pts) + ' 分' + (capped ? '（' + capped + ' 条按封顶截断）' : ''))
+      : ('导入完成：新增 ' + add + ' 条' + (up ? '，更新 ' + up + ' 条' : '')), 'ok');
+  } catch(err) {
+    console.error('impApply', err);
+    toast('导入失败：' + err.message, 'bad');
   }
-  logAct('表格导入', IMP_DEF[kind].title + '：新增 ' + add + ' 条' + (up ? '，更新 ' + up + ' 条' : '') + (kind === 'ledger' ? '，合计 ' + p1(pts) + ' 分' : ''));
-  saveDB(); closeDlg(); render();
-  IMP.plan = null;
-  toast(kind === 'ledger'
-    ? ('已导入 ' + add + ' 条流水，合计 ' + p1(pts) + ' 分' + (capped ? '（' + capped + ' 条按封顶截断）' : ''))
-    : ('导入完成：新增 ' + add + ' 条' + (up ? '，更新 ' + up + ' 条' : '')), 'ok');
 }
 function purgeNotice(){
   var c = DB.config, mt = DB.maintenance || {};
@@ -2078,7 +2157,6 @@ function vMyShop(){
   var m = DB.members[SESS.member_id];
   var s = m ? statsOf(m) : null;
   var cards = DB.gifts.map(function(g){
-    var canR = s && s.eligible && g.stock > 0 && s.available >= g.min;
     var st = !g.stock ? ['bad','缺货'] : (!s || !s.eligible ? ['','资格不足'] : (s.available < g.min ? ['warn','积分不足'] : ['ok','可兑换']));
     return '<div class="gift"><h4>' + esc(g.name) + '</h4><p class="meta">' + esc(g.cat) + '</p>'
       + '<p class="price">' + g.min + '~' + g.max + ' 分</p>'
@@ -2113,21 +2191,27 @@ function vMe(){
     + '<label class="field">当前密码<input type="password" name="old" required autocomplete="current-password"></label>'
     + '<label class="field">新密码（至少 6 位）<input type="password" name="n1" required minlength="6" autocomplete="new-password"></label>'
     + '<label class="field">确认新密码<input type="password" name="n2" required minlength="6" autocomplete="new-password"></label>'
-    + '<div class="row" style="justify-content:flex-end"><button class="btn-accent" type="submit">保存新密码</button></div>'
+    + '<div class="row" style="justify-content:flex-end"><button class="btn-accent" type="button" data-act="save-pw">保存新密码</button></div>'
     + '</form></section>'
     + '</div>';
 }
 function submitPw(f){
-  var a = ACCS[SESS.u];
-  var oldp = f.elements.old.value, n1 = f.elements.n1.value, n2 = f.elements.n2.value;
-  if(!a) return;
-  if(a.hash !== pwHash(a.u, oldp)){ toast('当前密码不正确','bad'); return; }
-  if(n1.length < 6){ toast('新密码至少 6 位','bad'); return; }
-  if(n1 !== n2){ toast('两次输入的新密码不一致','bad'); return; }
-  a.hash = pwHash(a.u, n1); a.def = false; a.updated = todayStr();
-  logAct('修改密码', a.u + ' 修改了登录密码');
-  saveAccs(); render();
-  toast('密码已更新','ok');
+  try {
+    var fd = new FormData(f);
+    var a = ACCS[SESS.u];
+    if(!a) return;
+    var oldp = String(fd.get('old') || ''), n1 = String(fd.get('n1') || ''), n2 = String(fd.get('n2') || '');
+    if(a.hash !== pwHash(a.u, oldp)){ toast('当前密码不正确','bad'); return; }
+    if(n1.length < 6){ toast('新密码至少 6 位','bad'); return; }
+    if(n1 !== n2){ toast('两次输入的新密码不一致','bad'); return; }
+    a.hash = pwHash(a.u, n1); a.def = false; a.updated = todayStr();
+    logAct('修改密码', a.u + ' 修改了登录密码');
+    saveAccs(); render();
+    toast('密码已更新','ok');
+  } catch(err) {
+    console.error('submitPw', err);
+    toast('修改失败：' + err.message, 'bad');
+  }
 }
 
 /* ============ 忘记密码 ============ */
@@ -2136,12 +2220,12 @@ function fpOpen(){
   $('fpBody').innerHTML = '<form id="formFp1" class="form" novalidate>'
     + '<label class="field">登录账号<input type="text" name="u" required placeholder="admin / audit / 会员编号"></label>'
     + '<p class="err" id="fpErr" hidden></p>'
-    + '<div class="row" style="justify-content:flex-end"><button class="btn" type="button" data-act="close-fp">取消</button><button class="btn-accent" type="submit">下一步</button></div>'
+    + '<div class="row" style="justify-content:flex-end"><button class="btn" type="button" data-act="close-fp">取消</button><button class="btn-accent" type="button" data-act="save-fp1">下一步</button></div>'
     + '</form>';
   openFp();
 }
 function fpStep1(f){
-  var u = f.elements.u.value.trim();
+  var u = String(new FormData(f).get('u') || '').trim();
   var a = findAcc(u);
   var err = $('fpErr');
   if(!a){ err.textContent = '账号不存在'; err.hidden = false; return; }
@@ -2217,25 +2301,30 @@ document.addEventListener('submit', function(e){
   var f = e.target;
   if(!f || !f.id) return;
   e.preventDefault();
-  switch(f.id){
-    case 'loginForm':
-      var r = doLogin(f.elements.user.value, f.elements.pass.value);
-      if(!r.ok){ var err = $('loginErr'); err.textContent = r.msg; err.hidden = false; return; }
-      logAct('登录', r.acc.name + '（' + ROLE_NAME[r.acc.role] + '）');
-      saveDB();
-      enterApp();
-      break;
-    case 'formMember': submitMember(f); break;
-    case 'formAdj': submitAdj(f); break;
-    case 'formLedger': submitLedger(f); break;
-    case 'formRedeem': submitRedeem(f); break;
-    case 'formGift': submitGift(f); break;
-    case 'formStock': submitStock(f); break;
-    case 'formCfg': submitCfg(f); break;
-    case 'formPurge': submitPurge(f); break;
-    case 'formPw': submitPw(f); break;
-    case 'formPhone': submitPhone(f); break;
-    case 'formFp1': fpStep1(f); break;
+  try {
+    switch(f.id){
+      case 'loginForm':
+        var r = doLogin(f.elements.user.value, f.elements.pass.value);
+        if(!r.ok){ var err = $('loginErr'); err.textContent = r.msg; err.hidden = false; return; }
+        logAct('登录', r.acc.name + '（' + ROLE_NAME[r.acc.role] + '）');
+        saveDB();
+        enterApp();
+        break;
+      case 'formMember': submitMember(f); break;
+      case 'formAdj': submitAdj(f); break;
+      case 'formLedger': submitLedger(f); break;
+      case 'formRedeem': submitRedeem(f); break;
+      case 'formGift': submitGift(f); break;
+      case 'formStock': submitStock(f); break;
+      case 'formCfg': submitCfg(f); break;
+      case 'formPurge': submitPurge(f); break;
+      case 'formPw': submitPw(f); break;
+      case 'formPhone': submitPhone(f); break;
+      case 'formFp1': fpStep1(f); break;
+    }
+  } catch(err) {
+    console.error('Form submit error:', err);
+    toast('操作失败：' + (err.message || '未知错误'), 'bad');
   }
 });
 
@@ -2244,39 +2333,56 @@ document.addEventListener('click', function(e){
   if(!el) return;
   var act = el.getAttribute('data-act');
   var id = el.getAttribute('data-id');
-  switch(act){
-    case 'tab':
-      var v = el.getAttribute('data-view');
-      var okTab = navList().some(function(i){ return i.k === v; });
-      if(!okTab){ toast('当前角色无此权限','bad'); return; }
-      UI.tab = v; render(); window.scrollTo(0,0); break;
-    case 'review-tab': UI.review = el.getAttribute('data-mode'); render(); break;
-    case 'member-open': openMember(id); break;
-    case 'member-new': memberForm(null); break;
-    case 'member-edit': memberForm(id); break;
-    case 'member-del': delMember(id); break;
-    case 'dive-handle': diveHandle(id); break;
-    case 'points-adj': pointsAdjForm(id); break;
-    case 'rd-approve': approveRd(id); break;
-    case 'rd-reject': rejectRd(id); break;
-    case 'rd-issue': issueRd(id); break;
-    case 'gift-new': giftForm(null); break;
-    case 'gift-edit': giftForm(id); break;
-    case 'gift-del': delGift(id); break;
-    case 'stock-adj': stockForm(id); break;
-    case 'ap-approve': approveAp(id); break;
-    case 'ap-reject': rejectAp(id); break;
-    case 'acc-reset': accReset(id); break;
-    case 'acc-phone': accPhone(id); break;
-    case 'imp-open': importDlg(id); break;
-    case 'imp-tpl': tplDownload(id); break;
-    case 'imp-parse': impParse(id); break;
-    case 'imp-apply': impApply(id); break;
-    case 'purge-now': purgeConfirm(); break;
-    case 'data-export': exportData(); break;
-    case 'data-reset': resetData(); break;
-    case 'close-dlg': closeDlg(); break;
-    case 'close-fp': closeFp(); break;
+  try {
+    switch(act){
+      case 'tab':
+        var v = el.getAttribute('data-view');
+        var okTab = navList().some(function(i){ return i.k === v; });
+        if(!okTab){ toast('当前角色无此权限','bad'); return; }
+        UI.tab = v; render(); window.scrollTo(0,0); break;
+      case 'review-tab': UI.review = el.getAttribute('data-mode'); render(); break;
+      case 'member-open': openMember(id); break;
+      case 'member-new': memberForm(null); break;
+      case 'member-edit': memberForm(id); break;
+      case 'member-del': delMember(id); break;
+      case 'dive-handle': diveHandle(id); break;
+      case 'points-adj': pointsAdjForm(id); break;
+      case 'rd-approve': approveRd(id); break;
+      case 'rd-reject': rejectRd(id); break;
+      case 'rd-issue': issueRd(id); break;
+      case 'gift-new': giftForm(null); break;
+      case 'gift-edit': giftForm(id); break;
+      case 'gift-del': delGift(id); break;
+      case 'stock-adj': stockForm(id); break;
+      case 'ap-approve': approveAp(id); break;
+      case 'ap-reject': rejectAp(id); break;
+      case 'acc-reset': accReset(id); break;
+      case 'acc-phone': accPhone(id); break;
+      case 'imp-open': importDlg(id); break;
+      case 'imp-tpl': tplDownload(id); break;
+      case 'imp-parse': impParse(id); break;
+      case 'imp-apply': impApply(id); break;
+      case 'purge-now': purgeConfirm(); break;
+      case 'data-export': exportData(); break;
+      case 'data-reset': resetData(); break;
+      case 'close-dlg': closeDlg(); break;
+      case 'close-fp': closeFp(); break;
+      // ===== 保存动作统一处理 =====
+      case 'save-member': submitMember(document.getElementById('formMember')); break;
+      case 'save-adj': submitAdj(document.getElementById('formAdj')); break;
+      case 'save-gift': submitGift(document.getElementById('formGift')); break;
+      case 'save-stock': submitStock(document.getElementById('formStock')); break;
+      case 'save-phone': submitPhone(document.getElementById('formPhone')); break;
+      case 'save-pw': submitPw(document.getElementById('formPw')); break;
+      case 'save-cfg': submitCfg(document.getElementById('formCfg')); break;
+      case 'save-purge': submitPurge(document.getElementById('formPurge')); break;
+      case 'save-ledger': submitLedger(document.getElementById('formLedger')); break;
+      case 'save-redeem': submitRedeem(document.getElementById('formRedeem')); break;
+      case 'save-fp1': fpStep1(document.getElementById('formFp1')); break;
+    }
+  } catch(err) {
+    console.error('Click action error:', err);
+    toast('操作失败：' + (err.message || '未知错误'), 'bad');
   }
 });
 
