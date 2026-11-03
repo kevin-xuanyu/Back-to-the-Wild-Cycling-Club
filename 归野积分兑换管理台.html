@@ -1,0 +1,2362 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>归野机车俱乐部 · 积分兑换管理台</title>
+<style>
+:root{
+  --bg:#0a0a0b; --panel:#131316; --panel2:#191a1e; --line:#26262b; --line2:#38383f;
+  --txt:#eae7e2; --dim:#8f8d8a; --copper:#c8874a; --gold:#d8b25e; --silver:#b6bfc6;
+  --danger:#cf5a4e; --ok:#4fae8b; --warn:#d99b45;
+  --r:2px; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15px;line-height:1.6}
+[hidden]{display:none!important}
+h1,h2,h3,h4{margin:0;font-weight:600;line-height:1.3}
+p{margin:0}
+a{color:var(--copper)}
+code{font-family:var(--mono);font-size:.92em;background:#1d1e22;padding:1px 5px;border-radius:2px}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.dim{color:var(--dim)}
+
+/* ---------- login ---------- */
+.login{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr)}
+.login-brand{position:relative;padding:clamp(32px,5vw,72px);display:flex;flex-direction:column;justify-content:center;gap:22px;border-right:1px solid var(--line);overflow:hidden}
+.login-brand::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(200,135,74,.055) 0 14px,transparent 14px 34px);pointer-events:none}
+.mark{width:52px;height:52px;border:1px solid var(--copper);color:var(--copper);display:grid;place-items:center;font-family:var(--mono);font-size:15px;letter-spacing:.12em;border-radius:2px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;color:var(--dim);text-transform:uppercase}
+.login-title{font-size:clamp(26px,3.2vw,40px);letter-spacing:-.01em;line-height:1.25}
+.login-lead{color:var(--dim);max-width:46ch}
+.login-facts{list-style:none;margin:8px 0 0;padding:0;border-top:1px solid var(--line);max-width:460px}
+.login-facts li{display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px}
+.login-facts span{color:var(--dim)}
+.login-facts b{font-weight:600;font-family:var(--mono)}
+.login-panel{display:flex;align-items:center;justify-content:center;padding:clamp(24px,4vw,56px);background:var(--panel)}
+.login-box{width:100%;max-width:360px;display:flex;flex-direction:column;gap:18px}
+.login-box h2{font-size:20px}
+.field{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--dim)}
+input[type=text],input[type=search],input[type=number],input[type=date],input[type=password],input[type=tel],select,textarea{
+  background:#0e0e10;border:1px solid var(--line2);color:var(--txt);padding:9px 11px;font:inherit;font-size:14px;border-radius:var(--r);width:100%
+}
+textarea{min-height:64px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--copper);outline-offset:2px}
+.btn,.btn-accent,.btn-ghost,.btn-danger{font:inherit;font-size:14px;padding:8px 14px;border-radius:var(--r);cursor:pointer;border:1px solid var(--line2);background:transparent;color:var(--txt);transition:background-color .15s,border-color .15s,color .15s}
+.btn:hover{background:var(--panel2);border-color:var(--dim)}
+.btn-accent{background:var(--copper);border-color:var(--copper);color:#160f07;font-weight:600}
+.btn-accent:hover{background:#d69a5f;border-color:#d69a5f}
+.btn-danger{color:var(--danger);border-color:#4a2a26}
+.btn-danger:hover{background:#2a1714}
+.btn-ghost{border-color:transparent;color:var(--dim);padding:6px 8px}
+.btn-ghost:hover{color:var(--txt);background:var(--panel2)}
+.btn-sm{padding:4px 9px;font-size:12.5px}
+.acc-hint{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;font-size:12.5px;color:var(--dim)}
+.acc-hint summary{cursor:pointer;color:var(--txt);font-size:13px}
+.acc-hint ul{margin:8px 0 0;padding-left:18px;line-height:1.9}
+.err{color:var(--danger);font-size:13px}
+.ok-msg{color:var(--ok);font-size:13px}
+
+/* ---------- shell ---------- */
+.hdr{position:sticky;top:0;z-index:30;background:rgba(10,10,11,.94);border-bottom:1px solid var(--line);border-top:2px solid var(--copper);display:flex;align-items:center;gap:20px;padding:10px clamp(14px,2.4vw,28px);flex-wrap:wrap;backdrop-filter:blur(8px)}
+.hdr-brand{display:flex;align-items:center;gap:10px}
+.hdr-brand .mark{width:34px;height:34px;font-size:11px}
+.hdr-club{font-size:14px;font-weight:600;letter-spacing:.01em;margin:0}
+.hdr-sub{font-size:11px;color:var(--dim);font-family:var(--mono);letter-spacing:.1em}
+.tabs{display:flex;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{font:inherit;font-size:13.5px;background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);padding:8px 12px;cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--txt)}
+.tab.is-on{color:var(--txt);border-bottom-color:var(--copper)}
+.tab .dot{display:inline-block;min-width:16px;padding:0 4px;margin-left:5px;background:var(--copper);color:#160f07;border-radius:9px;font-size:10.5px;font-family:var(--mono);line-height:16px;text-align:center}
+.hdr-user{display:flex;align-items:center;gap:10px;font-size:13px}
+.role-chip{font-size:11px;font-family:var(--mono);letter-spacing:.08em;padding:2px 7px;border:1px solid var(--line2);border-radius:2px;color:var(--copper)}
+.role-chip.auditor{color:var(--silver)}
+.role-chip.member{color:var(--gold)}
+.main{padding:clamp(16px,2.4vw,30px) clamp(14px,2.4vw,32px) 64px;max-width:1560px;margin:0 auto}
+.foot{max-width:1560px;margin:0 auto;padding:0 clamp(14px,2.4vw,32px) 28px;color:var(--dim);font-size:12px}
+
+/* ---------- common blocks ---------- */
+.vhead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.vhead h2{font-size:20px;letter-spacing:-.01em}
+.vhead p{color:var(--dim);font-size:13px;margin-top:3px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:18px}
+.kpi{background:var(--bg);padding:14px 16px}
+.kpi p{font-size:12px;color:var(--dim)}
+.kpi b{display:block;font-family:var(--mono);font-size:clamp(19px,2.1vw,25px);font-weight:600;margin-top:5px;letter-spacing:-.02em}
+.kpi i{font-style:normal;font-size:12px;color:var(--dim);margin-left:3px;font-weight:400}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 16px 20px;margin-bottom:16px}
+.phead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.phead h3{font-size:14px;display:flex;align-items:center;gap:8px}
+.phead h3::before{content:"";width:6px;height:6px;background:var(--copper);display:inline-block}
+.count{font-size:12px;color:var(--dim);font-family:var(--mono)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px}
+.grid2e{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-weight:500;font-size:12px;color:var(--dim);padding:8px 10px;border-bottom:1px solid var(--line2);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:hover{background:#17181c}
+.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.nowrap{white-space:nowrap}
+.empty{padding:26px 10px;text-align:center;color:var(--dim);font-size:13px}
+.form{display:flex;flex-direction:column;gap:12px}
+.frow{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.form-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.hint{font-size:12.5px;color:var(--dim)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font:inherit;font-size:13px;padding:6px 11px;border:1px solid var(--line2);background:#0e0e10;color:var(--txt);border-radius:2px;cursor:pointer}
+.chip:hover{border-color:var(--dim)}
+.chip.is-on{background:var(--copper);border-color:var(--copper);color:#160f07;font-weight:600}
+.patch{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:1px 8px 1px 6px;border:1px solid var(--line2);border-radius:11px;white-space:nowrap}
+.patch::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--dim)}
+.patch.p-copper::before{background:#c8874a}
+.patch.p-silver::before{background:#b6bfc6}
+.patch.p-gold::before{background:#d8b25e}
+.patch.p-black::before{background:#5a5a63}
+.badge{font-size:11.5px;padding:1px 7px;border-radius:2px;border:1px solid var(--line2);color:var(--dim);white-space:nowrap}
+.badge.ok{color:var(--ok);border-color:#25463b}
+.badge.warn{color:var(--warn);border-color:#4a3a1f}
+.badge.bad{color:var(--danger);border-color:#4a2a26}
+.badge.wait{color:var(--copper);border-color:#4a3520}
+.bar{height:5px;background:#22232a;border-radius:3px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--copper)}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.list li:last-child{border-bottom:0}
+.issue{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.issue:last-child{border-bottom:0}
+.issue .tag{flex:none;font-size:11.5px;padding:1px 7px;border:1px solid var(--line2);border-radius:2px;color:var(--dim);margin-top:2px}
+.issue .tag.high{color:var(--danger);border-color:#4a2a26}
+.issue .tag.mid{color:var(--warn);border-color:#4a3a1f}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:2px;overflow:hidden}
+.seg button{font:inherit;font-size:13px;background:none;border:0;color:var(--dim);padding:6px 12px;cursor:pointer}
+.seg button.is-on{background:var(--copper);color:#160f07;font-weight:600}
+.notice{border-left:2px solid var(--copper);background:#17140f;padding:10px 14px;font-size:13px;color:#d8cfc4;margin-bottom:16px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.notice.warn{border-left-color:var(--warn);background:#1a1610}
+.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin:0}
+.dl div{min-width:0}
+.dl dt{font-size:11.5px;color:var(--dim);margin-bottom:2px}
+.dl dd{margin:0;font-size:15px;font-family:var(--mono)}
+.gifts{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.gift{border:1px solid var(--line);background:var(--panel2);padding:13px 14px;border-radius:var(--r);display:flex;flex-direction:column;gap:6px}
+.gift h4{font-size:14px}
+.gift .meta{font-size:12px;color:var(--dim)}
+.gift .price{font-family:var(--mono);color:var(--gold);font-size:13px}
+
+/* ---------- dialog / toast ---------- */
+.modal{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;padding:14px}
+.modal.is-open{display:flex}
+.modal-mask{position:absolute;inset:0;background:rgba(4,4,5,.74)}
+.modal-box{position:relative;display:flex;flex-direction:column;width:min(680px,100%);max-height:88vh;background:var(--panel);border:1px solid var(--line2);border-radius:var(--r);box-shadow:0 24px 60px rgba(0,0,0,.55);overflow:hidden}
+.dlg-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel);flex:0 0 auto}
+.dlg-head h2{font-size:16px}
+.dlg-body{padding:18px;overflow:auto;flex:1 1 auto;min-height:0}
+.dlg-actions{position:sticky;bottom:-18px;margin:16px -18px -18px;padding:12px 18px;background:var(--panel);border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;z-index:3}
+.is-bad{border-color:var(--danger)!important;box-shadow:0 0 0 1px var(--danger)!important}
+body.modal-on{overflow:hidden}
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);background:#efece6;color:#141210;padding:10px 18px;border-radius:2px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:100;max-width:min(560px,90vw)}
+.toast.is-on{opacity:1;transform:translate(-50%,0)}
+.toast.bad{background:#cf5a4e;color:#fff}
+.toast.ok{background:#4fae8b;color:#06130e}
+
+@media (max-width:1000px){
+  .login{grid-template-columns:minmax(0,1fr)}
+  .login-brand{border-right:0;border-bottom:1px solid var(--line);padding:28px 22px;gap:14px}
+  .login-facts{display:none}
+  .grid2{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:640px){
+  .hdr{gap:10px}
+  .hdr-user .who{display:none}
+  .tabs{order:3;width:100%;flex:none}
+}
+@media print{
+  .hdr,.foot,.toast,.btn,.btn-accent,.btn-danger,.btn-ghost,.tabs{display:none!important}
+  body{background:#fff;color:#111}
+  .panel{border-color:#ccc;background:#fff}
+  .login{display:none}
+  th,td{border-color:#ddd}
+}
+</style>
+</head>
+<body>
+
+<div class="login" id="loginScreen">
+  <div class="login-brand">
+    <div class="mark">GY</div>
+    <p class="eyebrow">GUYE MOTO CLUB</p>
+    <p class="login-title">归野机车俱乐部<br>积分兑换管理台</p>
+    <p class="login-lead">1 积分 = 0.25 元起，按会员等级阶梯计价。积分登记、兑换核定、发放全程留痕，管理、审计、会员三级权限分离。</p>
+    <ul class="login-facts">
+      <li><span>兑换资格</span><b>≥ 1000 分 · 入群满 6 个月</b></li>
+      <li><span>积分封顶</span><b>2000 分</b></li>
+      <li><span>兑换额度</span><b>单次及累计 ≤ 2000 分</b></li>
+      <li><span>发放时效</span><b>核定后 10 个工作日</b></li>
+    </ul>
+  </div>
+  <div class="login-panel">
+    <div class="login-box">
+      <h2>登录</h2>
+      <form id="loginForm" class="form">
+        <label class="field">账号
+          <input type="text" name="user" autocomplete="username" placeholder="admin / audit / 会员编号" required>
+        </label>
+        <label class="field">密码
+          <input type="password" name="pass" autocomplete="current-password" required>
+        </label>
+        <p class="err" id="loginErr" hidden></p>
+        <button class="btn-accent" type="submit">登录</button>
+      </form>
+      <div class="row" style="justify-content:space-between">
+        <button class="btn-ghost" type="button" id="forgotBtn">忘记密码</button>
+        <span class="hint">会员账号 = 会员编号</span>
+      </div>
+      <details class="acc-hint">
+        <summary>初始账号与默认密码</summary>
+        <ul>
+          <li><code>admin</code> / <code>gy2026</code> — 管理：全部权限</li>
+          <li><code>audit</code> / <code>gy2026</code> — 审计：改动需管理员审批</li>
+          <li><code>M001</code> / <code>gy2026</code> — 会员：只看自己的积分</li>
+        </ul>
+        <p style="margin-top:6px">首次登录后可在「我的账号」修改密码。</p>
+      </details>
+    </div>
+  </div>
+</div>
+
+<div class="shell" id="app" hidden>
+  <header class="hdr">
+    <div class="hdr-brand">
+      <span class="mark">GY</span>
+      <div>
+        <h1 class="hdr-club" id="hdrClub">归野机车俱乐部</h1>
+        <p class="hdr-sub">POINTS CONSOLE</p>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="主导航"></nav>
+    <div class="hdr-user">
+      <span class="role-chip" id="roleChip">查看</span>
+      <span class="who" id="userName">—</span>
+      <button class="btn-ghost" type="button" id="logoutBtn">退出</button>
+    </div>
+  </header>
+  <main class="main" id="main"></main>
+  <footer class="foot">归野机车俱乐部积分兑换体系 v2.0 · 数据保存在本机浏览器 · 操作全程留痕</footer>
+</div>
+
+<div class="modal" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitle" aria-hidden="true">
+  <div class="modal-mask" data-act="close-dlg"></div>
+  <div class="modal-box">
+    <div class="dlg-head"><h2 id="dlgTitle">详情</h2><button class="btn-ghost" type="button" data-act="close-dlg">关闭</button></div>
+    <div class="dlg-body" id="dlgBody"></div>
+  </div>
+</div>
+
+<div class="modal" id="fpDlg" role="dialog" aria-modal="true" aria-label="找回密码" aria-hidden="true">
+  <div class="modal-mask" data-act="close-fp"></div>
+  <div class="modal-box">
+    <div class="dlg-head"><h2>找回密码</h2><button class="btn-ghost" type="button" data-act="close-fp">关闭</button></div>
+    <div class="dlg-body" id="fpBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<noscript><p style="padding:24px">本管理台需要启用 JavaScript 才能登录和查看数据。</p></noscript>
+
+<script>
+(function(){
+'use strict';
+
+/* ============ 基础工具 ============ */
+var KEY_DB = 'gy_club_db_v2', KEY_ACC = 'gy_club_acc_v2', KEY_SESS = 'gy_club_sess_v2';
+var OLD_DB = 'gy_club_db_v1', OLD_ACC = 'gy_club_acc_v1';
+var DEFAULT_PW = 'gy2026';
+var CATS = ['骑行装备','俱乐部周边','护具耗材','大型装备','加油券'];
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function num(v){ var n = parseFloat(v); return isFinite(n) ? n : 0; }
+function p1(v){ var n = Math.round(num(v)*10)/10; return (n % 1 === 0 ? String(n) : n.toFixed(1)); }
+function money(v){ return '¥' + (Math.round(num(v)*100)/100).toFixed(2); }
+function pad2(n){ return n < 10 ? '0'+n : ''+n; }
+function todayStr(d){ d = d || new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+function daysAgo(n){ var d = new Date(); d.setDate(d.getDate()-n); return todayStr(d); }
+function daysBetween(a, b){
+  if(!a) return 0;
+  var x = new Date(a + 'T00:00:00'), y = b ? new Date(b + 'T00:00:00') : new Date();
+  return Math.floor((y - x) / 86400000);
+}
+function nowStr(){ var d = new Date(); return todayStr(d)+' '+pad2(d.getHours())+':'+pad2(d.getMinutes())+':'+pad2(d.getSeconds()); }
+function hhmm(){ var d = new Date(); return pad2(d.getHours())+':'+pad2(d.getMinutes()); }
+function mask(p){ p = String(p||''); return p.length >= 7 ? p.slice(0,3)+'****'+p.slice(-4) : p; }
+function hash(s){
+  var h = 2166136261;
+  for(var i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(16);
+}
+function pwHash(u, p){ return hash('gy|' + String(u).toLowerCase() + '|' + p); }
+
+var toastTimer = null;
+function toast(msg, kind){
+  var el = $('toast');
+  el.textContent = msg;
+  el.className = 'toast is-on' + (kind ? ' ' + kind : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.className = 'toast'; }, 3200);
+}
+function showDlg(title, html){
+  $('dlgTitle').textContent = title;
+  $('dlgBody').innerHTML = html;
+  var d = $('dlg');
+  d.classList.add('is-open');
+  d.setAttribute('aria-hidden','false');
+  document.body.classList.add('modal-on');
+  var box = d.querySelector ? d.querySelector('.dlg-body') : null;
+  if(box){ box.scrollTop = 0; }
+}
+function closeDlg(){
+  var d = $('dlg');
+  d.classList.remove('is-open');
+  d.setAttribute('aria-hidden','true');
+  document.body.classList.remove('modal-on');
+}
+function openFp(){
+  var d = $('fpDlg');
+  d.classList.add('is-open');
+  d.setAttribute('aria-hidden','false');
+  document.body.classList.add('modal-on');
+}
+function closeFp(){
+  var d = $('fpDlg');
+  d.classList.remove('is-open');
+  d.setAttribute('aria-hidden','true');
+  document.body.classList.remove('modal-on');
+}
+function badField(el, msg){
+  toast(msg, 'bad');
+  if(!el) return;
+  try{ el.classList.add('is-bad'); el.focus(); }catch(e){}
+  setTimeout(function(){ try{ el.classList.remove('is-bad'); }catch(e){} }, 2000);
+}
+
+/* ============ 常量与制度 ============ */
+var CFG_DEFAULT = {
+  club:'归野机车俱乐部', point_value:0.25, cap:2000, min_redeem:1000,
+  hold_months:6, max_redeem_points:2000, dive_warn:15, dive_kick:30,
+  purge_on:true, purge_months:12, purge_gap:30,
+  ratios:{ member:0.25, normal:0.5, vip:0.75, svip:1.0, staff:1.2 }
+};
+var LEVELS = [
+  { k:'member', name:'成员', min:0, patch:'铜', desc:'注册入会即拥有，参与基础骑行活动累计积分' },
+  { k:'normal', name:'普通会员', min:200, patch:'铜', desc:'登记会员信息表，送铜色队标一枚' },
+  { k:'vip', name:'VIP 会员', min:700, patch:'银', desc:'俱乐部背标、银色队标、报名优先、兑换资格、内部投票权' },
+  { k:'svip', name:'SVIP 会员', min:1500, patch:'金', desc:'骑行马甲、金色队标、长途与公益优先、物资优先、可申请活动协助' }
+];
+var EARN_ITEMS = [
+  { label:'短途骑行（单日 150 km 以内）', points:5 },
+  { label:'中长途骑行（单日 200 km 以上或过夜）', points:10 },
+  { label:'公益骑行 / 志愿活动', points:20 },
+  { label:'恶劣天气加成（+0.5 倍）', points:5 },
+  { label:'后勤保障 / 活动筹备', points:5 },
+  { label:'人事 / 宣传管理岗（月度）', points:50 },
+  { label:'素材拍摄剪辑（播放 2000+）', points:30 },
+  { label:'推荐新成员入会', points:5 },
+  { label:'年度无违规记录（年末统一发放）', points:100 },
+  { label:'组织大型活动（远途翻倍）', points:10 }
+];
+var DEDUCT_ITEMS = [
+  { label:'违反安全规定 / 炸街 / 危险驾驶', points:-200 },
+  { label:'报名活动无故缺席（扣当次活动一倍）', points:-5 },
+  { label:'群内违规广告 / 不良内容 / 争吵', points:-50 },
+  { label:'损害俱乐部声誉（建议除名）', points:-100 }
+];
+var PERM = {
+  admin: ['member.write','points.write','points.approve','gift.write','gift.stock','redeem.create','redeem.approve','redeem.issue','audit.view','account.manage','data.export','data.import','data.reset','ledger.purge'],
+  auditor: ['member.write','points.request','gift.write','redeem.approve','audit.view'],
+  member: []
+};
+var ROLE_NAME = { admin:'管理', auditor:'审计', member:'会员' };
+
+/* ============ 状态 ============ */
+var DB = null, ACCS = null, SESS = null;
+var UI = { tab:'dashboard', review:'pending', memberQ:'', ledgerQ:'', redeemMember:'', giftCat:'', auditFilter:'all', searchFocus:null };
+var FP = { acc:null, code:null, exp:0, tries:0, timer:null };
+
+function can(p){
+  if(!SESS) return false;
+  var list = PERM[SESS.role] || [];
+  return list.indexOf(p) >= 0;
+}
+function need(p){
+  if(can(p)) return true;
+  toast('当前角色无此权限','bad');
+  return false;
+}
+function uid(kind, prefix){
+  DB.seq[kind] = (DB.seq[kind] || 0) + 1;
+  var s = '' + DB.seq[kind];
+  while(s.length < 3){ s = '0' + s; }
+  return prefix + s;
+}
+
+/* ============ 账号 ============ */
+function blankAccs(){ return {}; }
+function mkAcc(u, role, name, phone, memberId){
+  return { u:u, role:role, name:name, phone:phone || '', member_id:memberId || null,
+           hash:pwHash(u, DEFAULT_PW), def:true, updated:todayStr() };
+}
+function loadAccs(){
+  var raw = localStorage.getItem(KEY_ACC);
+  if(raw){ try{ ACCS = JSON.parse(raw); }catch(e){ ACCS = null; } }
+  if(!ACCS || !ACCS.admin){
+    ACCS = blankAccs();
+    ACCS.admin = mkAcc('admin','admin','理事会管理员','13800000001',null);
+    ACCS.audit = mkAcc('audit','auditor','审计员','13800000002',null);
+    if(!raw){
+      var old = localStorage.getItem(OLD_ACC);
+      if(old){
+        try{
+          var o = JSON.parse(old);
+          if(o.admin){ ACCS.admin = Object.assign({}, o.admin, { u:'admin', role:'admin', name:'理事会管理员', phone:'13800000001', member_id:null }); }
+          if(o.audit){ ACCS.audit = Object.assign({}, o.audit, { u:'audit', role:'auditor', name:'审计员', phone:'13800000002', member_id:null }); }
+        }catch(e){}
+      }
+    }
+  }
+  saveAccs();
+}
+function saveAccs(){
+  try{ localStorage.setItem(KEY_ACC, JSON.stringify(ACCS)); }
+  catch(e){ toast('浏览器存储不可用，账号改动仅本次有效','bad'); }
+}
+function syncMemberAccounts(){
+  Object.keys(DB.members).forEach(function(id){
+    var m = DB.members[id];
+    var a = ACCS[id];
+    if(!a){ ACCS[id] = mkAcc(id, 'member', m.name, m.phone, id); }
+    else { a.name = m.name; a.phone = m.phone; a.member_id = id; a.role = 'member'; }
+  });
+  Object.keys(ACCS).forEach(function(k){
+    var a = ACCS[k];
+    if(a.role === 'member' && !DB.members[a.member_id]){ delete ACCS[k]; }
+  });
+  saveAccs();
+}
+function findAcc(u){
+  var key = String(u||'').trim().toLowerCase();
+  var hit = null;
+  Object.keys(ACCS).forEach(function(k){
+    var a = ACCS[k];
+    if(String(a.u).toLowerCase() === key){ hit = a; }
+  });
+  return hit;
+}
+
+/* ============ 数据 ============ */
+function blank(){
+  return { config:JSON.parse(JSON.stringify(CFG_DEFAULT)), members:{}, ledger:[], redemptions:[], gifts:[],
+           approvals:[], logs:[], maintenance:{ last_purge:'', last_count:0, last_mode:'' },
+           seq:{ m:0, l:0, r:0, g:0, a:0, log:0 } };
+}
+function seedGifts(){
+  var g = [
+    ['俱乐部周边','定制贴纸',50,80,40,'官方周边'],
+    ['俱乐部周边','徽章',60,100,30,'官方周边'],
+    ['俱乐部周边','T恤',150,200,12,'官方周边'],
+    ['俱乐部周边','钥匙扣',50,90,25,'官方周边'],
+    ['骑行装备','头盔内衬',100,180,15,'按实际物品标价'],
+    ['骑行装备','骑行手套',150,300,10,'按实际物品标价'],
+    ['骑行装备','护膝护肘',200,300,8,'按实际物品标价'],
+    ['护具耗材','保养耗材',300,600,6,'按标价核定'],
+    ['护具耗材','链条油',300,500,9,'按标价核定'],
+    ['大型装备','高级别头盔',1000,1800,2,'需理事会核定'],
+    ['大型装备','骑行服',1200,2000,3,'需理事会核定'],
+    ['加油券','加油券 100 元',100,150,20,'按面值核定'],
+    ['加油券','加油券 300 元',280,400,10,'按面值核定']
+  ];
+  g.forEach(function(x){
+    DB.gifts.push({ id:uid('g','G'), cat:x[0], name:x[1], min:x[2], max:x[3], stock:x[4], note:x[5] });
+  });
+}
+function seed(){
+  DB = blank();
+  var M = [
+    ['陈野','13800002041',daysAgo(958),daysAgo(2),true],
+    ['林海','13800002042',daysAgo(1088),daysAgo(5),false],
+    ['赵铁','13800002043',daysAgo(645),daysAgo(3),false],
+    ['周扬','13800002044',daysAgo(506),daysAgo(1),false],
+    ['吴迪','13800002045',daysAgo(73),daysAgo(4),false],
+    ['郑川','13800002046',daysAgo(1518),daysAgo(18),true],
+    ['何山','13800002047',daysAgo(1258),daysAgo(41),false]
+  ];
+  M.forEach(function(x){
+    var id = uid('m','M');
+    DB.members[id] = { id:id, name:x[0], phone:x[1], joined:x[2], last_active:x[3], staff:x[4], status:'active', note:'' };
+  });
+  seedGifts();
+  function add(mid, item, points, days){
+    DB.ledger.push({ id:uid('l','L'), member_id:mid, member_name:DB.members[mid].name, item:item,
+      points:points, date:daysAgo(days), by:'system', via:'初始化', note:'系统初始化数据' });
+  }
+  function many(mid, item, points, count, start, step){
+    for(var i=0;i<count;i++){ add(mid, item, points, start - i*step); }
+  }
+  add('M001','历史积分结转',1400,300);
+  many('M001','人事 / 宣传管理岗（月度）',50,4,240,30);
+  many('M001','中长途骑行（单日 200 km 以上或过夜）',10,6,180,20);
+  many('M001','公益骑行 / 志愿活动',20,2,120,40);
+  many('M001','短途骑行（单日 150 km 以内）',5,4,60,9);
+  add('M001','年度无违规记录（年末统一发放）',100,150);
+
+  add('M002','历史积分结转',1200,280);
+  many('M002','中长途骑行（单日 200 km 以上或过夜）',10,8,200,18);
+  many('M002','短途骑行（单日 150 km 以内）',5,10,90,7);
+  many('M002','公益骑行 / 志愿活动',20,2,60,25);
+  add('M002','素材拍摄剪辑（播放 2000+）',30,45);
+
+  add('M003','历史积分结转',400,260);
+  many('M003','短途骑行（单日 150 km 以内）',5,12,150,10);
+  many('M003','中长途骑行（单日 200 km 以上或过夜）',10,8,120,12);
+  many('M003','后勤保障 / 活动筹备',5,6,80,11);
+  add('M003','素材拍摄剪辑（播放 2000+）',30,35);
+
+  add('M004','历史积分结转',200,240);
+  many('M004','短途骑行（单日 150 km 以内）',5,10,100,9);
+  many('M004','中长途骑行（单日 200 km 以上或过夜）',10,4,70,15);
+  many('M004','推荐新成员入会',5,4,60,12);
+  add('M004','报名活动无故缺席（扣当次活动一倍）',-5,20);
+
+  many('M005','短途骑行（单日 150 km 以内）',5,8,60,6);
+  many('M005','中长途骑行（单日 200 km 以上或过夜）',10,4,45,9);
+  many('M005','后勤保障 / 活动筹备',5,4,30,7);
+  many('M005','推荐新成员入会',5,4,20,5);
+
+  add('M006','历史积分结转',1600,320);
+  many('M006','中长途骑行（单日 200 km 以上或过夜）',10,10,220,20);
+  many('M006','短途骑行（单日 150 km 以内）',5,20,200,9);
+  many('M006','公益骑行 / 志愿活动',20,5,150,25);
+  add('M006','年度无违规记录（年末统一发放）',100,180);
+
+  add('M007','历史积分结转',800,300);
+  many('M007','短途骑行（单日 150 km 以内）',5,20,180,8);
+  many('M007','中长途骑行（单日 200 km 以上或过夜）',10,6,140,18);
+  many('M007','后勤保障 / 活动筹备',5,4,90,15);
+  add('M007','群内违规广告 / 不良内容 / 争吵',-50,25);
+
+  DB.redemptions.push({ id:uid('r','R'), member_id:'M001', member_name:'陈野', gift_id:'G003', gift_name:'俱乐部周边 · T恤',
+    points:150, amount:150, status:'issued', created_at:daysAgo(120), created_by:'admin',
+    approved_by:'audit', approved_at:daysAgo(118), issued_at:daysAgo(96), note:'已发放' });
+  DB.redemptions.push({ id:uid('r','R'), member_id:'M002', member_name:'林海', gift_id:'G006', gift_name:'骑行装备 · 骑行手套',
+    points:180, amount:135, status:'approved', created_at:daysAgo(26), created_by:'admin',
+    approved_by:'audit', approved_at:daysAgo(24), issued_at:'', note:'已核定，待发放' });
+  DB.redemptions.push({ id:uid('r','R'), member_id:'M003', member_name:'赵铁', gift_id:'G005', gift_name:'骑行装备 · 头盔内衬',
+    points:120, amount:60, status:'pending', created_at:daysAgo(3), created_by:'admin',
+    approved_by:'', approved_at:'', issued_at:'', note:'制度上线前提交' });
+  DB.redemptions.push({ id:uid('r','R'), member_id:'M007', member_name:'何山', gift_id:'G012', gift_name:'加油券 · 加油券 100 元',
+    points:100, amount:75, status:'rejected', created_at:daysAgo(40), created_by:'admin',
+    approved_by:'admin', approved_at:daysAgo(38), issued_at:'', note:'可用积分不足，驳回' });
+
+  DB.logs.push({ id:uid('log','LG'), time:daysAgo(118)+' 10:12:00', user:'admin', role:'admin', action:'兑换发放', detail:'陈野 俱乐部周边 · T恤 150 分' });
+  DB.logs.push({ id:uid('log','LG'), time:daysAgo(24)+' 15:40:00', user:'audit', role:'auditor', action:'兑换核定', detail:'林海 骑行装备 · 骑行手套 180 分' });
+}
+function migrateOld(){
+  var raw = localStorage.getItem(OLD_DB);
+  if(!raw) return false;
+  try{
+    var o = JSON.parse(raw);
+    if(!o || !o.members || !Object.keys(o.members).length) return false;
+    DB = blank();
+    DB.config = Object.assign({}, CFG_DEFAULT, o.config || {});
+    Object.keys(o.members).forEach(function(id){
+      var m = o.members[id];
+      DB.members[id] = { id:id, name:m.name, phone:/^\d{11}$/.test(String(m.phone||'').replace(/\D/g,'')) ? String(m.phone).replace(/\D/g,'') : '1380000' + String(id).replace(/\D/g,'').padStart(4,'0'),
+        joined:m.joined || todayStr(), last_active:m.last_active || todayStr(), staff:!!m.staff, status:m.status === 'removed' ? 'removed' : 'active', note:m.note || '' };
+      DB.seq.m = Math.max(DB.seq.m, parseInt(String(id).replace(/\D/g,''),10) || 0);
+    });
+    seedGifts();
+    (o.ledger || []).forEach(function(e){
+      DB.ledger.push({ id:uid('l','L'), member_id:e.member_id, member_name:(DB.members[e.member_id] || {}).name || e.member_name || '',
+        item:e.item, points:e.points, date:e.date, by:e.by || 'system', via:e.via || '历史数据', note:e.note || '' });
+    });
+    (o.redemptions || []).forEach(function(r){
+      DB.redemptions.push({ id:uid('r','R'), member_id:r.member_id, member_name:(DB.members[r.member_id] || {}).name || r.member_name || '',
+        gift_id:'', gift_name:r.item || '', points:r.points, amount:r.amount || 0, status:r.status || 'pending',
+        created_at:r.created_at || todayStr(), created_by:r.created_by || 'system', approved_by:r.approved_by || '',
+        approved_at:r.approved_at || '', issued_at:r.issued_at || '', note:r.note || '' });
+    });
+    (o.logs || []).forEach(function(l){
+      DB.logs.push({ id:uid('log','LG'), time:l.time, user:l.user, role:l.role, action:l.action, detail:l.detail });
+    });
+    return true;
+  }catch(e){ return false; }
+}
+function loadDB(){
+  var raw = localStorage.getItem(KEY_DB);
+  if(raw){
+    try{ DB = JSON.parse(raw); }catch(e){ DB = null; }
+  }
+  if(!DB || !DB.members){
+    if(!migrateOld()){ seed(); }
+  }
+  DB.config = Object.assign({}, CFG_DEFAULT, DB.config || {});
+  DB.config.ratios = Object.assign({}, CFG_DEFAULT.ratios, DB.config.ratios || {});
+  DB.gifts = DB.gifts || [];
+  DB.approvals = DB.approvals || [];
+  DB.maintenance = Object.assign({ last_purge:'', last_count:0, last_mode:'' }, DB.maintenance || {});
+  DB.seq = Object.assign({ m:0, l:0, r:0, g:0, a:0, log:0 }, DB.seq || {});
+  saveDB();
+}
+function saveDB(){
+  try{ localStorage.setItem(KEY_DB, JSON.stringify(DB)); }
+  catch(e){ toast('浏览器存储不可用，数据仅在本次会话有效','bad'); }
+}
+function logAct(action, detail){
+  DB.logs.unshift({ id:uid('log','LG'), time:nowStr(), user:SESS ? SESS.u : 'system', role:SESS ? SESS.role : 'system', action:action, detail:detail });
+  if(DB.logs.length > 800){ DB.logs.length = 800; }
+}
+
+/* ============ 计算 ============ */
+function levelOf(earned){
+  var lv = LEVELS[0];
+  for(var i=0;i<LEVELS.length;i++){ if(earned >= LEVELS[i].min){ lv = LEVELS[i]; } }
+  return lv;
+}
+function nextLevel(earned){
+  for(var i=0;i<LEVELS.length;i++){ if(earned < LEVELS[i].min){ return LEVELS[i]; } }
+  return null;
+}
+function statsOf(m){
+  if(!m) return null;
+  var earn = 0, ded = 0;
+  DB.ledger.forEach(function(e){
+    if(e.member_id !== m.id) return;
+    if(e.points >= 0){ earn += e.points; } else { ded += -e.points; }
+  });
+  var earned = Math.max(0, earn - ded);
+  var redeemed = 0, pending = 0;
+  DB.redemptions.forEach(function(r){
+    if(r.member_id !== m.id) return;
+    if(r.status === 'approved' || r.status === 'issued'){ redeemed += r.points; }
+    if(r.status === 'pending'){ pending += r.points; }
+  });
+  var available = m.status === 'removed' ? 0 : Math.max(0, earned - redeemed);
+  var lv = levelOf(earned);
+  var months = Math.floor(daysBetween(m.joined) / 30.44);
+  var idle = daysBetween(m.last_active);
+  var ratio = m.staff ? DB.config.ratios.staff : (DB.config.ratios[lv.k] || DB.config.point_value);
+  var reasons = [];
+  if(m.status === 'removed'){ reasons.push('会员已除名'); }
+  if(available < DB.config.min_redeem){ reasons.push('可用积分不足 ' + DB.config.min_redeem); }
+  if(months < DB.config.hold_months){ reasons.push('入群未满 ' + DB.config.hold_months + ' 个月'); }
+  return { m:m, earned:earned, deducted:ded, redeemed:redeemed, pending:pending, available:available,
+           level:lv, next:nextLevel(earned), months:months, idle:idle, ratio:ratio,
+           eligible:m.status !== 'removed' && reasons.length === 0, reasons:reasons };
+}
+function patchOf(st){
+  if(st.m.status === 'removed'){ return { cls:'p-black', txt:'已除名' }; }
+  if(st.m.staff){ return { cls:'p-black', txt:'管理 · 黑标' }; }
+  var map = { '铜':'p-copper', '银':'p-silver', '金':'p-gold' };
+  return { cls:map[st.level.patch] || 'p-copper', txt:st.level.patch + '标 · ' + st.level.name };
+}
+function statusOf(st){
+  if(st.m.status === 'removed'){ return '<span class="badge bad">已除名</span>'; }
+  if(st.idle >= DB.config.dive_kick){ return '<span class="badge bad">除名预警 ' + st.idle + ' 天</span>'; }
+  if(st.idle >= DB.config.dive_warn){ return '<span class="badge warn">潜水预警 ' + st.idle + ' 天</span>'; }
+  return '<span class="badge ok">正常</span>';
+}
+function allStats(){
+  return Object.keys(DB.members).map(function(k){ return statsOf(DB.members[k]); });
+}
+
+/* ============ 会话 ============ */
+function setSess(a){
+  SESS = { u:a.u, role:a.role, name:a.name, member_id:a.member_id || null, at:Date.now() };
+  try{ sessionStorage.setItem(KEY_SESS, JSON.stringify(SESS)); }catch(e){}
+}
+function loadSess(){
+  try{
+    var raw = sessionStorage.getItem(KEY_SESS);
+    if(!raw) return null;
+    var s = JSON.parse(raw);
+    var a = ACCS[s.u];
+    if(!a) return null;
+    return { u:a.u, role:a.role, name:a.name, member_id:a.member_id || null };
+  }catch(e){ return null; }
+}
+function doLogin(u, p){
+  var a = findAcc(u);
+  if(!a) return { ok:false, msg:'账号不存在，会员请用会员编号登录' };
+  if(a.hash !== pwHash(a.u, p)) return { ok:false, msg:'密码错误，可点「忘记密码」用手机号重置' };
+  if(a.role === 'member' && !DB.members[a.member_id]) return { ok:false, msg:'该会员已被移除，账号已停用' };
+  setSess(a);
+  return { ok:true, acc:a };
+}
+function logout(){
+  SESS = null;
+  try{ sessionStorage.removeItem(KEY_SESS); }catch(e){}
+  showLogin();
+}
+function showLogin(){
+  $('app').hidden = true;
+  $('loginScreen').hidden = false;
+  $('loginErr').hidden = true;
+  var f = $('loginForm');
+  if(f) f.reset();
+}
+function enterApp(){
+  $('loginScreen').hidden = true;
+  $('app').hidden = false;
+  $('hdrClub').textContent = DB.config.club;
+  $('userName').textContent = SESS.name + ' · ' + SESS.u;
+  var chip = $('roleChip');
+  chip.textContent = ROLE_NAME[SESS.role];
+  chip.className = 'role-chip ' + SESS.role;
+  UI.tab = SESS.role === 'member' ? 'mypoints' : 'dashboard';
+  autoPurge();
+}
+
+/* ============ 渲染骨架 ============ */
+function navList(){
+  var items = [
+    { k:'dashboard', label:'总览', roles:['admin','auditor'] },
+    { k:'members', label:'会员', roles:['admin','auditor'] },
+    { k:'ledger', label:'积分流水', roles:['admin','auditor'] },
+    { k:'redeem', label:'兑换中心', roles:['admin','auditor'] },
+    { k:'gifts', label:'物品库', roles:['admin','auditor'] },
+    { k:'review', label:'审核中心', roles:['admin','auditor'] },
+    { k:'rules', label:'等级规则', roles:['admin','auditor'] },
+    { k:'accounts', label:'账号', roles:['admin'] },
+    { k:'mypoints', label:'我的积分', roles:['member'] },
+    { k:'myshop', label:'兑换物品', roles:['member'] },
+    { k:'me', label:'我的账号', roles:['admin','auditor','member'] }
+  ];
+  return items.filter(function(i){ return i.roles.indexOf(SESS.role) >= 0; });
+}
+function renderTabs(){
+  var pending = DB.approvals.filter(function(a){ return a.status === 'pending'; }).length;
+  var html = navList().map(function(i){
+    var dot = (i.k === 'review' && pending && SESS.role === 'admin') ? '<span class="dot">' + pending + '</span>' : '';
+    return '<button class="tab' + (UI.tab === i.k ? ' is-on' : '') + '" type="button" data-act="tab" data-view="' + i.k + '">' + i.label + dot + '</button>';
+  }).join('');
+  $('tabs').innerHTML = html;
+}
+function render(){
+  renderTabs();
+  var fn = ({ dashboard:vDashboard, members:vMembers, ledger:vLedger, redeem:vRedeem, gifts:vGifts,
+              review:vReview, rules:vRules, accounts:vAccounts, me:vMe, mypoints:vMyPoints, myshop:vMyShop })[UI.tab];
+  $('main').innerHTML = fn ? fn() : '<p class="empty">页面不存在</p>';
+  if(UI.searchFocus){
+    var el = $(UI.searchFocus);
+    UI.searchFocus = null;
+    if(el){ el.focus(); var v = el.value; try{ el.setSelectionRange(v.length, v.length); }catch(e){} }
+  }
+}
+function vhead(title, sub, right){
+  return '<div class="vhead"><div><h2>' + esc(title) + '</h2><p>' + esc(sub) + '</p></div><div class="row">' + (right || '') + '</div></div>';
+}
+
+/* ============ 总览 ============ */
+function vDashboard(){
+  var st = allStats();
+  var earned = 0, avail = 0, redeemed = 0;
+  st.forEach(function(s){ earned += s.earned; avail += s.available; redeemed += s.redeemed; });
+  var pendingRd = DB.redemptions.filter(function(r){ return r.status === 'pending'; }).length;
+  var pendingAp = DB.approvals.filter(function(a){ return a.status === 'pending'; }).length;
+  var idleN = st.filter(function(s){ return s.idle >= DB.config.dive_warn && s.m.status !== 'removed'; }).length;
+  var lowStock = DB.gifts.filter(function(g){ return g.stock <= 3; });
+
+  var kpi = [
+    ['会员总数', st.length, '人'],
+    ['累计发放积分', p1(earned), '分'],
+    ['可用积分余额', p1(avail), '分'],
+    ['已兑换积分', p1(redeemed), '分'],
+    ['待核定兑换', pendingRd, '单'],
+    ['待审批申请', pendingAp, '单']
+  ].map(function(x){
+    return '<div class="kpi"><p>' + x[0] + '</p><b>' + x[1] + '<i>' + x[2] + '</i></b></div>';
+  }).join('');
+
+  var lvCount = LEVELS.map(function(l){
+    var n = st.filter(function(s){ return s.level.k === l.k; }).length;
+    var pct = st.length ? Math.round(n / st.length * 100) : 0;
+    return '<li><span>' + l.patch + '标 · ' + l.name + ' <span class="dim">≥' + l.min + '</span></span><span class="mono">' + n + ' 人 · ' + pct + '%</span></li>';
+  }).join('');
+
+  var todo = [];
+  if(pendingAp && can('points.approve')){ todo.push(['待你审批的积分调整', pendingAp + ' 单', 'review']); }
+  if(pendingRd && can('redeem.approve')){ todo.push(['待核定的兑换申请', pendingRd + ' 单', 'redeem']); }
+  if(idleN){ todo.push(['潜水预警会员', idleN + ' 人', 'members']); }
+  if(lowStock.length){ todo.push(['库存不足物品', lowStock.length + ' 项', 'gifts']); }
+  if(!todo.length){ todo.push(['暂无待办', '一切正常', '']); }
+
+  var recent = DB.ledger.slice().sort(function(a,b){ return a.date < b.date ? 1 : -1; }).slice(0,6).map(function(e){
+    var s = e.points >= 0 ? 'var(--ok)' : 'var(--danger)';
+    return '<li><span>' + esc(e.member_name || e.member_id) + ' · <span class="dim">' + esc(e.item) + '</span></span><span class="mono" style="color:' + s + '">' + (e.points > 0 ? '+' : '') + p1(e.points) + '</span></li>';
+  }).join('');
+
+  return vhead('总览', '制度执行概览与待办', '')
+    + '<div class="kpis">' + kpi + '</div>'
+    + '<div class="grid2">'
+    + '<section class="panel"><div class="phead"><h3>待办事项</h3></div><ul class="list">'
+    + todo.map(function(t){
+        var btn = t[2] ? '<button class="btn btn-sm" type="button" data-act="tab" data-view="' + t[2] + '">前往</button>' : '';
+        return '<li><span>' + esc(t[0]) + '</span><span class="row"><span class="mono dim">' + esc(t[1]) + '</span>' + btn + '</span></li>';
+      }).join('')
+    + '</ul></section>'
+    + '<section class="panel"><div class="phead"><h3>等级分布</h3><span class="count">' + st.length + ' 人</span></div><ul class="list">' + lvCount + '</ul></section>'
+    + '</div>'
+    + '<div class="grid2">'
+    + '<section class="panel"><div class="phead"><h3>最近积分流水</h3><button class="btn-ghost btn-sm" type="button" data-act="tab" data-view="ledger">全部</button></div><ul class="list">' + (recent || '<li class="dim">暂无记录</li>') + '</ul></section>'
+    + '<section class="panel"><div class="phead"><h3>库存预警</h3><span class="count">≤3 件</span></div><ul class="list">'
+    + (lowStock.length ? lowStock.map(function(g){ return '<li><span>' + esc(g.cat) + ' · ' + esc(g.name) + '</span><span class="mono" style="color:var(--warn)">' + g.stock + ' 件</span></li>'; }).join('') : '<li class="dim">库存充足</li>')
+    + '</ul></section>'
+    + '</div>';
+}
+
+/* ============ 会员 ============ */
+function vMembers(){
+  var q = UI.memberQ.trim().toLowerCase();
+  var list = allStats().filter(function(s){
+    if(!q) return true;
+    return (s.m.name + ' ' + s.m.id + ' ' + (s.m.phone || '')).toLowerCase().indexOf(q) >= 0;
+  }).sort(function(a,b){ return b.earned - a.earned; });
+
+  var rows = list.map(function(s){
+    var p = patchOf(s);
+    return '<tr>'
+      + '<td class="mono dim nowrap">' + s.m.id + '</td>'
+      + '<td><button class="btn-ghost btn-sm" type="button" data-act="member-open" data-id="' + s.m.id + '">' + esc(s.m.name) + '</button></td>'
+      + '<td><span class="patch ' + p.cls + '">' + p.txt + '</span></td>'
+      + '<td class="num">' + p1(s.earned) + '</td>'
+      + '<td class="num">' + p1(s.available) + '</td>'
+      + '<td class="mono dim nowrap">' + esc(mask(s.m.phone)) + '</td>'
+      + '<td class="mono dim nowrap">' + esc(s.m.joined) + '</td>'
+      + '<td>' + statusOf(s) + '</td>'
+      + '<td class="nowrap"><button class="btn btn-sm" type="button" data-act="member-open" data-id="' + s.m.id + '">详情</button></td>'
+      + '</tr>';
+  }).join('');
+
+  return vhead('会员', '增删会员、查看积分与资格状态，支持表格批量导入',
+      can('member.write') ? '<button class="btn" type="button" data-act="imp-open" data-id="member">导入表格</button><button class="btn-accent" type="button" data-act="member-new">新增会员</button>' : '')
+    + '<div class="notice">新增会员会自动生成登录账号：账号 = 会员编号，默认密码 <code>' + DEFAULT_PW + '</code>；修改手机号后可用于找回密码。' + (can('points.write') ? '' : '积分调整需提交管理员审批。') + '</div>'
+    + '<section class="panel"><div class="phead"><h3>会员名录</h3>'
+    + '<label class="sr" for="memberQ">搜索会员</label>'
+    + '<input type="search" id="memberQ" placeholder="搜索姓名 / 编号 / 手机号" value="' + esc(UI.memberQ) + '" style="max-width:260px">'
+    + '</div><div class="tbl-wrap"><table><caption class="sr">会员积分与资格汇总</caption><thead><tr>'
+    + '<th scope="col">编号</th><th scope="col">姓名</th><th scope="col">等级队标</th><th scope="col" class="num">累计</th><th scope="col" class="num">可用</th>'
+    + '<th scope="col">手机号</th><th scope="col">入群</th><th scope="col">状态</th><th scope="col">操作</th></tr></thead><tbody>'
+    + (rows || '<tr><td colspan="9" class="empty">没有匹配的会员</td></tr>')
+    + '</tbody></table></div></section>';
+}
+function openMember(id){
+  var m = DB.members[id];
+  if(!m){ toast('会员不存在','bad'); return; }
+  var s = statsOf(m), p = patchOf(s);
+  var nextBar = '';
+  if(s.next){
+    var span = s.next.min - s.level.min;
+    var pct = span > 0 ? Math.min(100, Math.round((s.earned - s.level.min) / span * 100)) : 100;
+    nextBar = '<div style="margin-top:8px"><p class="hint">距离 ' + s.next.name + ' 还差 ' + p1(Math.max(0, s.next.min - s.earned)) + ' 分</p><div class="bar"><i style="width:' + pct + '%"></i></div></div>';
+  } else {
+    nextBar = '<p class="hint" style="margin-top:8px">已达最高等级</p>';
+  }
+  var lvRows = DB.ledger.filter(function(e){ return e.member_id === id; }).sort(function(a,b){ return a.date < b.date ? 1 : -1; }).slice(0,12).map(function(e){
+    return '<tr><td class="mono dim nowrap">' + esc(e.date) + '</td><td>' + esc(e.item) + '</td><td class="num" style="color:' + (e.points >= 0 ? 'var(--ok)' : 'var(--danger)') + '">' + (e.points > 0 ? '+' : '') + p1(e.points) + '</td><td class="dim">' + esc(e.via || '') + '</td></tr>';
+  }).join('');
+  var rds = DB.redemptions.filter(function(r){ return r.member_id === id; }).map(function(r){
+    return '<tr><td class="mono dim nowrap">' + esc(r.created_at) + '</td><td>' + esc(r.gift_name) + '</td><td class="num">' + p1(r.points) + '</td><td>' + rdBadge(r.status) + '</td></tr>';
+  }).join('');
+
+  var acts = '';
+  if(can('member.write')){
+    acts += '<button class="btn" type="button" data-act="member-edit" data-id="' + id + '">编辑资料</button>';
+  }
+  if(can('points.write')){
+    acts += '<button class="btn" type="button" data-act="points-adj" data-id="' + id + '">调整积分</button>';
+  }
+  if(can('points.request')){
+    acts += '<button class="btn" type="button" data-act="points-adj" data-id="' + id + '">申请调整积分</button>';
+  }
+  if(can('member.write')){
+    acts += '<button class="btn" type="button" data-act="dive-handle" data-id="' + id + '">潜水处理</button>';
+    acts += '<button class="btn-danger btn" type="button" data-act="member-del" data-id="' + id + '">删除会员</button>';
+  }
+
+  var html = '<div class="row" style="justify-content:space-between;align-items:flex-start;gap:16px">'
+    + '<div><p style="font-size:20px;font-weight:600">' + esc(m.name) + ' <span class="mono dim" style="font-size:13px">' + m.id + '</span></p>'
+    + '<p style="margin-top:6px"><span class="patch ' + p.cls + '">' + p.txt + '</span> ' + statusOf(s) + '</p></div>'
+    + '<div class="row">' + acts + '</div></div>'
+    + '<dl class="dl" style="margin-top:18px">'
+    + '<div><dt>累计获得</dt><dd>' + p1(s.earned) + '</dd></div>'
+    + '<div><dt>可用积分</dt><dd>' + p1(s.available) + '</dd></div>'
+    + '<div><dt>已兑换</dt><dd>' + p1(s.redeemed) + '</dd></div>'
+    + '<div><dt>折算价值</dt><dd>' + money(s.available * s.ratio) + '</dd></div>'
+    + '<div><dt>入群时长</dt><dd>' + s.months + ' 个月</dd></div>'
+    + '<div><dt>最近活跃</dt><dd>' + s.idle + ' 天前</dd></div>'
+    + '</dl>'
+    + nextBar
+    + '<p class="hint" style="margin-top:12px">兑换资格：' + (s.eligible ? '<span class="badge ok">已具备</span>' : '<span class="badge bad">不具备</span> ' + esc(s.reasons.join('；'))) + '</p>'
+    + '<div class="phead" style="margin-top:20px"><h3>积分流水</h3><span class="count">最近 12 条</span></div>'
+    + '<div class="tbl-wrap"><table><thead><tr><th scope="col">日期</th><th scope="col">事项</th><th scope="col" class="num">分值</th><th scope="col">来源</th></tr></thead><tbody>'
+    + (lvRows || '<tr><td colspan="4" class="empty">暂无流水</td></tr>') + '</tbody></table></div>'
+    + '<div class="phead" style="margin-top:20px"><h3>兑换记录</h3></div>'
+    + '<div class="tbl-wrap"><table><thead><tr><th scope="col">申请日期</th><th scope="col">物品</th><th scope="col" class="num">积分</th><th scope="col">状态</th></tr></thead><tbody>'
+    + (rds || '<tr><td colspan="4" class="empty">暂无兑换</td></tr>') + '</tbody></table></div>';
+  showDlg('会员详情 · ' + m.name, html);
+}
+function memberForm(id){
+  var m = id ? DB.members[id] : null;
+  var v = m || { name:'', phone:'', joined:todayStr(), last_active:todayStr(), staff:false, note:'' };
+  var html = '<form id="formMember" class="form" novalidate>'
+    + '<input type="hidden" name="id" value="' + (m ? m.id : '') + '">'
+    + '<div class="frow"><label class="field">姓名<input type="text" name="name" required maxlength="20" value="' + esc(v.name) + '"></label>'
+    + '<label class="field">手机号（用于找回密码）<input type="tel" name="phone" required inputmode="numeric" autocomplete="tel" maxlength="13" value="' + esc(v.phone) + '" placeholder="11 位手机号"></label></div>'
+    + '<div class="frow"><label class="field">入群日期<input type="date" name="joined" required value="' + esc(v.joined) + '"></label>'
+    + '<label class="field">最近活跃<input type="date" name="last_active" required value="' + esc(v.last_active) + '"></label></div>'
+    + '<label class="field">备注<input type="text" name="note" maxlength="60" value="' + esc(v.note || '') + '"></label>'
+    + '<label class="row" style="font-size:13.5px;color:var(--txt)"><input type="checkbox" name="staff" ' + (v.staff ? 'checked' : '') + ' style="width:auto"> 管理岗（佩戴黑色队标，兑换倍率 ' + DB.config.ratios.staff + '）</label>'
+    + '<p class="hint">' + (m ? '修改姓名或手机号会同步到该会员的登录账号。' : '保存后自动生成账号：' + (DB.members ? '编号自动分配' : '') + '，默认密码 ' + DEFAULT_PW + '。') + '</p>'
+    + '<div class="dlg-actions"><button class="btn" type="button" data-act="close-dlg">取消</button><button class="btn-accent" type="submit">保存</button></div>'
+    + '</form>';
+  showDlg(m ? '编辑会员 · ' + m.name : '新增会员', html);
+}
+function submitMember(f){
+  if(!need('member.write')) return;
+  var id = f.elements.id.value;
+  var name = f.elements.name.value.trim();
+  var phone = f.elements.phone.value.replace(/\D/g,'');
+  if(!name){ badField(f.elements.name, '请填写姓名'); return; }
+  if(phone.length !== 11){ badField(f.elements.phone, '手机号需为 11 位数字，当前 ' + phone.length + ' 位'); return; }
+  var dup = Object.keys(DB.members).some(function(k){ return k !== id && DB.members[k].phone === phone; });
+  if(dup){ badField(f.elements.phone, '该手机号已被其他会员使用'); return; }
+  if(id && DB.members[id]){
+    var m = DB.members[id];
+    m.name = name; m.phone = phone; m.joined = f.elements.joined.value;
+    m.last_active = f.elements.last_active.value; m.staff = f.elements.staff.checked; m.note = f.elements.note.value.trim();
+    logAct('编辑会员', name + '（' + id + '）');
+    toast('会员资料已更新','ok');
+  } else {
+    var nid = uid('m','M');
+    DB.members[nid] = { id:nid, name:name, phone:phone, joined:f.elements.joined.value,
+      last_active:f.elements.last_active.value, staff:f.elements.staff.checked, status:'active', note:f.elements.note.value.trim() };
+    logAct('新增会员', name + '（' + nid + '）');
+    toast('已新增会员，账号 ' + nid + '，默认密码 ' + DEFAULT_PW, 'ok');
+  }
+  syncMemberAccounts();
+  saveDB();
+  closeDlg();
+  render();
+}
+function delMember(id){
+  if(!need('member.write')) return;
+  var m = DB.members[id];
+  if(!m) return;
+  if(!window.confirm('删除会员「' + m.name + '」？\n\n该会员的登录账号会一并删除，历史积分流水与兑换记录会保留归档。此操作不可撤销。')) return;
+  delete DB.members[id];
+  delete ACCS[id];
+  logAct('删除会员', m.name + '（' + id + '），账号同步删除');
+  saveDB(); saveAccs();
+  closeDlg(); render();
+  toast('会员已删除','ok');
+}
+function diveHandle(id){
+  if(!need('member.write')) return;
+  var s = statsOf(DB.members[id]);
+  if(!s) return;
+  if(s.m.status === 'removed'){ toast('该会员已除名'); return; }
+  if(!window.confirm('按管理细则对「' + s.m.name + '」执行潜水处理？\n\n将记一条 -' + p1(s.available) + ' 分的调整，把可用积分清零，并在日志中留痕。降级由理事会另行确认。')) return;
+  if(s.available > 0){
+    DB.ledger.push({ id:uid('l','L'), member_id:id, member_name:s.m.name, item:'潜水 ' + s.idle + ' 天未活跃 · 按细则清零积分',
+      points:-s.available, date:todayStr(), by:SESS.u, via:'细则执行', note:'潜水处理' });
+  }
+  logAct('潜水处理', s.m.name + '（' + id + '）已 ' + s.idle + ' 天未活跃，清零 ' + p1(s.available) + ' 分');
+  saveDB(); closeDlg(); render();
+  toast('已执行潜水处理','ok');
+}
+
+/* ============ 积分流水 ============ */
+function vLedger(){
+  var q = UI.ledgerQ.trim().toLowerCase();
+  var rows = DB.ledger.filter(function(e){
+    if(!q) return true;
+    return (e.member_name + ' ' + e.member_id + ' ' + e.item).toLowerCase().indexOf(q) >= 0;
+  }).sort(function(a,b){ return a.date < b.date ? 1 : (a.date > b.date ? -1 : 0); }).slice(0, 300);
+
+  var trs = rows.map(function(e){
+    return '<tr><td class="mono dim nowrap">' + esc(e.date) + '</td>'
+      + '<td>' + esc(e.member_name || e.member_id) + (DB.members[e.member_id] ? '' : ' <span class="badge">已删除</span>') + '</td>'
+      + '<td>' + esc(e.item) + '</td>'
+      + '<td class="num" style="color:' + (e.points >= 0 ? 'var(--ok)' : 'var(--danger)') + '">' + (e.points > 0 ? '+' : '') + p1(e.points) + '</td>'
+      + '<td class="dim">' + esc(e.by || '') + '</td>'
+      + '<td class="dim">' + esc(e.via || '') + '</td></tr>';
+  }).join('');
+
+  var writeBlock = '';
+  if(can('points.write') || can('points.request')){
+    var opts = Object.keys(DB.members).map(function(k){
+      var m = DB.members[k];
+      return '<option value="' + k + '">' + esc(m.name) + '（' + k + '）</option>';
+    }).join('');
+    var items = EARN_ITEMS.concat(DEDUCT_ITEMS).map(function(i){
+      return '<option value="' + i.points + '" data-label="' + esc(i.label) + '">' + esc(i.label) + '　' + (i.points > 0 ? '+' : '') + i.points + '</option>';
+    }).join('');
+    writeBlock = '<section class="panel"><div class="phead"><h3>' + (can('points.write') ? '积分登记' : '提交积分调整申请') + '</h3>'
+      + '<span class="count">' + (can('points.write') ? '登记后立即生效' : '需管理员审批后生效') + '</span></div>'
+      + '<form id="formLedger" class="form">'
+      + '<div class="frow"><label class="field">会员<select name="member" required>' + opts + '</select></label>'
+      + '<label class="field">事项<select name="preset">' + items + '</select></label></div>'
+      + '<div class="frow"><label class="field">分值<input type="number" name="points" step="0.5" required value="5"></label>'
+      + '<label class="field">生效日期<input type="date" name="date" value="' + todayStr() + '" ' + (can('points.write') ? '' : 'disabled') + '></label></div>'
+      + '<label class="field">原因 / 备注<input type="text" name="note" maxlength="80" placeholder="如：10 月 12 日环湖骑行"></label>'
+      + '<div class="form-foot"><p class="hint">' + (can('points.write') ? '累计积分封顶 ' + DB.config.cap + ' 分，超出部分自动截断。' : '提交后由管理员在「审核中心」审批，通过后才计入积分。') + '</p>'
+      + '<button class="btn-accent" type="submit">' + (can('points.write') ? '登记积分' : '提交申请') + '</button></div>'
+      + '</form></section>';
+  }
+
+  return vhead('积分流水', '全部积分变动记录，按时间倒序',
+      (can('points.write') ? '<button class="btn btn-sm" type="button" data-act="imp-open" data-id="ledger">导入流水</button>' : '')
+      + '<label class="sr" for="ledgerQ">搜索流水</label><input type="search" id="ledgerQ" placeholder="搜索会员 / 事项" value="' + esc(UI.ledgerQ) + '" style="max-width:240px">')
+    + purgeNotice()
+    + writeBlock
+    + '<section class="panel"><div class="phead"><h3>流水明细</h3><span class="count">' + rows.length + ' 条</span></div>'
+    + '<div class="tbl-wrap"><table><thead><tr><th scope="col">日期</th><th scope="col">会员</th><th scope="col">事项</th><th scope="col" class="num">分值</th><th scope="col">登记人</th><th scope="col">方式</th></tr></thead><tbody>'
+    + (trs || '<tr><td colspan="6" class="empty">暂无流水</td></tr>') + '</tbody></table></div></section>';
+}
+function submitLedger(f){
+  var mid = f.elements.member.value;
+  var m = DB.members[mid];
+  if(!m){ toast('请选择会员','bad'); return; }
+  var preset = f.elements.preset;
+  var item = preset.options[preset.selectedIndex] ? preset.options[preset.selectedIndex].getAttribute('data-label') : '积分调整';
+  var points = num(f.elements.points.value);
+  if(!points){ toast('分值不能为 0','bad'); return; }
+  var note = f.elements.note.value.trim();
+
+  if(can('points.write')){
+    var applied = applyPoints(mid, item, points, f.elements.date.value || todayStr(), note);
+    logAct(points >= 0 ? '登记积分' : '扣减积分', m.name + ' ' + (points > 0 ? '+' : '') + p1(points) + ' 分 · ' + item + (applied !== points ? '（封顶截断为 ' + p1(applied) + '）' : ''));
+    saveDB(); render();
+    toast(applied !== points ? '已登记，按封顶截断为 ' + p1(applied) + ' 分' : '已登记 ' + p1(applied) + ' 分', 'ok');
+  } else if(can('points.request')){
+    DB.approvals.unshift({ id:uid('a','A'), type:'points', member_id:mid, member_name:m.name,
+      item:item, delta:points, reason:note || item, applicant:SESS.u, applied_at:nowStr(),
+      status:'pending', reviewer:'', reviewed_at:'', review_note:'' });
+    logAct('提交积分调整申请', m.name + ' ' + (points > 0 ? '+' : '') + p1(points) + ' 分 · ' + item);
+    saveDB(); render();
+    toast('已提交审批，管理员通过后生效','ok');
+  } else {
+    toast('当前角色无此权限','bad');
+  }
+}
+function applyPoints(mid, item, points, date, note, via){
+  var m = DB.members[mid];
+  var s = statsOf(m);
+  var applied = points;
+  if(points > 0 && s.earned + points > DB.config.cap){ applied = DB.config.cap - s.earned; }
+  if(applied === 0){ toast('已达封顶，本次不再累计','bad'); return 0; }
+  DB.ledger.push({ id:uid('l','L'), member_id:mid, member_name:m.name, item:item, points:applied,
+    date:date || todayStr(), by:SESS.u, via:via || (can('points.write') ? '直接登记' : '审批通过'), note:note || '' });
+  return applied;
+}
+function pointsAdjForm(id){
+  var s = statsOf(DB.members[id]);
+  if(!s) return;
+  var isApprove = !can('points.write');
+  var html = '<form id="formAdj" class="form" novalidate>'
+    + '<input type="hidden" name="id" value="' + id + '">'
+    + '<p class="hint">' + esc(s.m.name) + ' 当前可用 ' + p1(s.available) + ' 分，累计 ' + p1(s.earned) + ' 分。</p>'
+    + '<label class="field">调整分值（负数为扣减）<input type="number" name="delta" step="0.5" required value="10"></label>'
+    + '<label class="field">原因<input type="text" name="reason" required maxlength="60" placeholder="如：补录 10 月 5 日活动积分"></label>'
+    + (isApprove ? '<p class="hint">提交后进入管理员审批，通过后才会计入积分。</p>' : '')
+    + '<div class="dlg-actions"><button class="btn" type="button" data-act="close-dlg">取消</button>'
+    + '<button class="btn-accent" type="submit">' + (isApprove ? '提交审批' : '确认调整') + '</button></div></form>';
+  showDlg(isApprove ? '申请调整积分' : '调整积分', html);
+}
+function submitAdj(f){
+  var id = f.elements.id.value;
+  var m = DB.members[id];
+  var delta = num(f.elements.delta.value);
+  var reason = f.elements.reason.value.trim();
+  if(!delta){ toast('分值不能为 0','bad'); return; }
+  if(can('points.write')){
+    var applied = applyPoints(id, reason || '手工调整', delta, todayStr(), reason);
+    logAct('调整积分', m.name + ' ' + (delta > 0 ? '+' : '') + p1(delta) + ' 分 · ' + reason);
+    saveDB(); closeDlg(); render();
+    toast('已调整 ' + p1(applied) + ' 分','ok');
+  } else if(can('points.request')){
+    DB.approvals.unshift({ id:uid('a','A'), type:'points', member_id:id, member_name:m.name,
+      item:reason || '手工调整', delta:delta, reason:reason, applicant:SESS.u, applied_at:nowStr(),
+      status:'pending', reviewer:'', reviewed_at:'', review_note:'' });
+    logAct('提交积分调整申请', m.name + ' ' + (delta > 0 ? '+' : '') + p1(delta) + ' 分 · ' + reason);
+    saveDB(); closeDlg(); render();
+    toast('已提交审批','ok');
+  } else {
+    toast('当前角色无此权限','bad');
+  }
+}
+
+/* ============ 兑换中心 ============ */
+function rdBadge(s){
+  var map = { pending:['wait','待核定'], approved:['ok','已核定'], rejected:['bad','已驳回'], issued:['ok','已发放'] };
+  var x = map[s] || ['', s];
+  return '<span class="badge ' + x[0] + '">' + x[1] + '</span>';
+}
+function vRedeem(){
+  var members = Object.keys(DB.members);
+  if(!UI.redeemMember || !DB.members[UI.redeemMember]){ UI.redeemMember = members[0] || ''; }
+  var st = UI.redeemMember ? statsOf(DB.members[UI.redeemMember]) : null;
+
+  var memberSel = '<label class="field" style="max-width:240px">选择会员<select id="redeemMemberSel">'
+    + members.map(function(k){ return '<option value="' + k + '"' + (k === UI.redeemMember ? ' selected' : '') + '>' + esc(DB.members[k].name) + '（' + k + '）</option>'; }).join('')
+    + '</select></label>';
+
+  var elig = '';
+  if(st){
+    elig = '<div class="notice' + (st.eligible ? '' : ' warn') + '">'
+      + '<span><b>' + esc(st.m.name) + '</b> · 可用 ' + p1(st.available) + ' 分 · 折算 ' + money(st.available * st.ratio) + ' · 已兑换 ' + p1(st.redeemed) + ' / ' + DB.config.max_redeem_points + ' 分</span>'
+      + '<span>' + (st.eligible ? '<span class="badge ok">具备兑换资格</span>' : '<span class="badge bad">不具备资格</span> ' + esc(st.reasons.join('；'))) + '</span></div>';
+  }
+
+  var form = '';
+  if(can('redeem.create') && st){
+    var giftOpts = DB.gifts.filter(function(g){ return g.stock > 0; }).map(function(g){
+      return '<option value="' + g.id + '" data-min="' + g.min + '" data-max="' + g.max + '" data-name="' + esc(g.cat + ' · ' + g.name) + '">' + esc(g.cat + ' · ' + g.name) + '（' + g.min + '~' + g.max + ' 分 · 库存 ' + g.stock + '）</option>';
+    }).join('');
+    form = '<section class="panel"><div class="phead"><h3>发起兑换申请</h3><span class="count">核定后扣积分与库存</span></div>'
+      + '<form id="formRedeem" class="form">'
+      + '<div class="frow"><label class="field">兑换物品<select name="gift">' + (giftOpts || '<option value="">暂无可兑物品</option>') + '</select></label>'
+      + '<label class="field">消耗积分<input type="number" name="points" id="redeemPoints" step="1" min="1" required value="100"></label></div>'
+      + '<label class="field">备注<input type="text" name="note" maxlength="60" placeholder="如：10 月活动奖励"></label>'
+      + '<div class="form-foot"><p class="hint" id="redeemCalc">按所选物品积分区间填写，折算金额随会员等级倍率计算。</p>'
+      + '<button class="btn-accent" type="submit">提交申请</button></div></form></section>';
+  }
+
+  var list = DB.redemptions.slice().sort(function(a,b){ return a.created_at < b.created_at ? 1 : -1; });
+  var rows = list.map(function(r){
+    var acts = '';
+    if(r.status === 'pending'){
+      if(can('redeem.approve')){ acts += '<button class="btn btn-sm" type="button" data-act="rd-approve" data-id="' + r.id + '">核定</button> <button class="btn btn-sm" type="button" data-act="rd-reject" data-id="' + r.id + '">驳回</button>'; }
+    } else if(r.status === 'approved'){
+      if(can('redeem.issue')){ acts += '<button class="btn btn-sm" type="button" data-act="rd-issue" data-id="' + r.id + '">标记发放</button>'; }
+    }
+    return '<tr><td class="mono dim nowrap">' + esc(r.created_at) + '</td>'
+      + '<td>' + esc(r.member_name) + '</td>'
+      + '<td>' + esc(r.gift_name) + '</td>'
+      + '<td class="num">' + p1(r.points) + '</td>'
+      + '<td class="num">' + money(r.amount) + '</td>'
+      + '<td>' + rdBadge(r.status) + '</td>'
+      + '<td class="dim">' + esc(r.note || '') + '</td>'
+      + '<td class="nowrap">' + (acts || '<span class="dim">—</span>') + '</td></tr>';
+  }).join('');
+
+  return vhead('兑换中心', '申请、核定、发放三态流转，核定即扣分与库存', memberSel)
+    + elig + form
+    + '<section class="panel"><div class="phead"><h3>兑换申请</h3><span class="count">' + list.length + ' 条</span></div>'
+    + '<div class="tbl-wrap"><table><thead><tr><th scope="col">申请日期</th><th scope="col">会员</th><th scope="col">物品</th><th scope="col" class="num">积分</th><th scope="col" class="num">金额</th><th scope="col">状态</th><th scope="col">备注</th><th scope="col">操作</th></tr></thead><tbody>'
+    + (rows || '<tr><td colspan="8" class="empty">暂无申请</td></tr>') + '</tbody></table></div></section>';
+}
+function submitRedeem(f){
+  if(!need('redeem.create')) return;
+  var st = statsOf(DB.members[UI.redeemMember]);
+  if(!st){ toast('请选择会员','bad'); return; }
+  var gid = f.elements.gift.value;
+  var g = DB.gifts.filter(function(x){ return x.id === gid; })[0];
+  if(!g){ toast('请选择可兑物品','bad'); return; }
+  var pts = num(f.elements.points.value);
+  if(pts <= 0){ toast('积分需大于 0','bad'); return; }
+  if(pts < g.min || pts > g.max){ toast('积分需在 ' + g.min + '~' + g.max + ' 之间','bad'); return; }
+  if(!st.eligible){ toast('该会员不具备兑换资格：' + st.reasons.join('；'),'bad'); return; }
+  if(st.redeemed + st.pending + pts > DB.config.max_redeem_points){ toast('超出累计兑换上限 ' + DB.config.max_redeem_points + ' 分','bad'); return; }
+  if(g.stock <= 0){ toast('该物品库存不足','bad'); return; }
+  var amount = Math.round(pts * st.ratio * 100) / 100;
+  DB.redemptions.push({ id:uid('r','R'), member_id:st.m.id, member_name:st.m.name, gift_id:g.id, gift_name:g.cat + ' · ' + g.name,
+    points:pts, amount:amount, status:'pending', created_at:todayStr(), created_by:SESS.u,
+    approved_by:'', approved_at:'', issued_at:'', note:f.elements.note.value.trim() });
+  logAct('提交兑换申请', st.m.name + ' ' + g.name + ' ' + p1(pts) + ' 分');
+  saveDB(); render();
+  toast('已提交，等待核定','ok');
+}
+function rdFind(id){ return DB.redemptions.filter(function(r){ return r.id === id; })[0]; }
+function approveRd(id){
+  if(!need('redeem.approve')) return;
+  var r = rdFind(id);
+  if(!r || r.status !== 'pending'){ toast('该申请状态已变化'); return; }
+  var st = statsOf(DB.members[r.member_id]);
+  if(!st){ toast('会员不存在','bad'); return; }
+  if(st.available < r.points){ toast('会员可用积分不足（' + p1(st.available) + ' 分），不能核定','bad'); return; }
+  if(st.redeemed + r.points > DB.config.max_redeem_points){ toast('超出累计兑换上限','bad'); return; }
+  var g = DB.gifts.filter(function(x){ return x.id === r.gift_id; })[0];
+  if(g && g.stock <= 0){ toast('库存不足，无法核定','bad'); return; }
+  if(!window.confirm('核定通过「' + r.member_name + '」的 ' + r.gift_name + '（' + p1(r.points) + ' 分）？\n\n通过后将扣除积分' + (g ? '并扣减库存 1 件' : '') + '。')) return;
+  r.status = 'approved'; r.approved_by = SESS.u; r.approved_at = todayStr();
+  r.amount = Math.round(r.points * st.ratio * 100) / 100;
+  if(g){ g.stock = Math.max(0, g.stock - 1); }
+  logAct('兑换核定', r.member_name + ' ' + r.gift_name + ' ' + p1(r.points) + ' 分' + (g ? '，库存余 ' + g.stock : ''));
+  saveDB(); render();
+  toast('已核定，积分与库存已扣减','ok');
+}
+function rejectRd(id){
+  if(!need('redeem.approve')) return;
+  var r = rdFind(id);
+  if(!r || r.status !== 'pending') return;
+  var why = window.prompt('驳回原因：', '不符合兑换条件');
+  if(why === null) return;
+  r.status = 'rejected'; r.approved_by = SESS.u; r.approved_at = todayStr(); r.note = why || '驳回';
+  logAct('兑换驳回', r.member_name + ' ' + r.gift_name + ' · ' + (why || ''));
+  saveDB(); render();
+  toast('已驳回','ok');
+}
+function issueRd(id){
+  if(!need('redeem.issue')) return;
+  var r = rdFind(id);
+  if(!r || r.status !== 'approved') return;
+  r.status = 'issued'; r.issued_at = todayStr();
+  logAct('兑换发放', r.member_name + ' ' + r.gift_name + ' ' + p1(r.points) + ' 分');
+  saveDB(); render();
+  toast('已标记发放','ok');
+}
+
+/* ============ 物品库 ============ */
+function vGifts(){
+  var list = DB.gifts.slice().sort(function(a,b){ return a.cat === b.cat ? a.min - b.min : (a.cat < b.cat ? -1 : 1); });
+  var rows = list.map(function(g){
+    var acts = '';
+    if(can('gift.write')){
+      acts += '<button class="btn btn-sm" type="button" data-act="gift-edit" data-id="' + g.id + '">编辑</button> ';
+      acts += '<button class="btn-danger btn btn-sm" type="button" data-act="gift-del" data-id="' + g.id + '">删除</button>';
+    }
+    if(can('gift.stock')){
+      acts += ' <button class="btn btn-sm" type="button" data-act="stock-adj" data-id="' + g.id + '">库存</button>';
+    }
+    return '<tr><td class="dim">' + esc(g.cat) + '</td><td>' + esc(g.name) + '</td>'
+      + '<td class="num">' + g.min + '~' + g.max + '</td>'
+      + '<td class="num" style="color:' + (g.stock <= 3 ? 'var(--warn)' : 'var(--txt)') + '">' + g.stock + '</td>'
+      + '<td class="dim">' + esc(g.note || '') + '</td>'
+      + '<td class="nowrap">' + (acts || '<span class="dim">—</span>') + '</td></tr>';
+  }).join('');
+
+  return vhead('物品库', '可兑换物品、积分区间与库存计数',
+      can('gift.write') ? '<button class="btn" type="button" data-act="imp-open" data-id="gift">导入表格</button><button class="btn-accent" type="button" data-act="gift-new">新增物品</button>' : '')
+    + '<div class="notice">核定通过时自动扣减库存 1 件；库存为 0 的物品无法申请兑换。' + (can('gift.stock') ? '' : '审计角色可维护物品信息，库存计数由管理员操作。') + '</div>'
+    + '<section class="panel"><div class="phead"><h3>物品清单</h3><span class="count">' + list.length + ' 项 · 总库存 ' + list.reduce(function(a,g){ return a + g.stock; },0) + ' 件</span></div>'
+    + '<div class="tbl-wrap"><table><thead><tr><th scope="col">类别</th><th scope="col">名称</th><th scope="col" class="num">积分区间</th><th scope="col" class="num">库存</th><th scope="col">说明</th><th scope="col">操作</th></tr></thead><tbody>'
+    + (rows || '<tr><td colspan="6" class="empty">暂无物品</td></tr>') + '</tbody></table></div></section>';
+}
+function giftForm(id){
+  var g = id ? DB.gifts.filter(function(x){ return x.id === id; })[0] : null;
+  var v = g || { cat:CATS[0], name:'', min:100, max:300, stock:0, note:'' };
+  var html = '<form id="formGift" class="form" novalidate>'
+    + '<input type="hidden" name="id" value="' + (g ? g.id : '') + '">'
+    + '<div class="frow"><label class="field">类别<input type="text" name="cat" list="catList" required maxlength="12" value="' + esc(v.cat) + '"></label>'
+    + '<label class="field">名称<input type="text" name="name" required maxlength="24" value="' + esc(v.name) + '"></label></div>'
+    + '<datalist id="catList">' + CATS.map(function(c){ return '<option value="' + esc(c) + '"></option>'; }).join('') + '</datalist>'
+    + '<div class="frow"><label class="field">最低积分<input type="number" name="min" step="1" min="1" required value="' + v.min + '"></label>'
+    + '<label class="field">最高积分<input type="number" name="max" step="1" min="1" required value="' + v.max + '"></label>'
+    + (can('gift.stock') ? '<label class="field">初始库存<input type="number" name="stock" step="1" min="0" required value="' + v.stock + '"></label>' : '')
+    + '</div>'
+    + '<label class="field">说明<input type="text" name="note" maxlength="40" value="' + esc(v.note || '') + '"></label>'
+    + '<div class="dlg-actions"><button class="btn" type="button" data-act="close-dlg">取消</button><button class="btn-accent" type="submit">保存</button></div></form>';
+  showDlg(g ? '编辑物品' : '新增物品', html);
+}
+function submitGift(f){
+  if(!need('gift.write')) return;
+  var id = f.elements.id.value;
+  var min = num(f.elements.min.value), max = num(f.elements.max.value);
+  if(!f.elements.name.value.trim()){ badField(f.elements.name, '请填写物品名称'); return; }
+  if(!f.elements.cat.value.trim()){ badField(f.elements.cat, '请填写物品类别'); return; }
+  if(min <= 0 || max <= 0){ badField(f.elements.min, '最低 / 最高积分需为大于 0 的数字'); return; }
+  if(min > max){ badField(f.elements.max, '最高积分不能小于最低积分（' + min + '~' + max + '）'); return; }
+  var stockEl = f.elements.stock;
+  if(id){
+    var g = DB.gifts.filter(function(x){ return x.id === id; })[0];
+    if(!g){ toast('物品不存在','bad'); return; }
+    g.cat = f.elements.cat.value.trim(); g.name = f.elements.name.value.trim();
+    g.min = min; g.max = max; g.note = f.elements.note.value.trim();
+    if(stockEl && can('gift.stock')){ g.stock = Math.max(0, num(stockEl.value)); }
+    logAct('编辑物品', g.cat + ' · ' + g.name + '（' + min + '~' + max + ' 分，库存 ' + g.stock + '）');
+    toast('物品已更新','ok');
+  } else {
+    var ng = { id:uid('g','G'), cat:f.elements.cat.value.trim(), name:f.elements.name.value.trim(),
+      min:min, max:max, stock:stockEl ? Math.max(0, num(stockEl.value)) : 0, note:f.elements.note.value.trim() };
+    DB.gifts.push(ng);
+    logAct('新增物品', ng.cat + ' · ' + ng.name + '（' + min + '~' + max + ' 分，库存 ' + ng.stock + '）');
+    toast('已新增物品','ok');
+  }
+  saveDB(); closeDlg(); render();
+}
+function delGift(id){
+  if(!need('gift.write')) return;
+  var g = DB.gifts.filter(function(x){ return x.id === id; })[0];
+  if(!g) return;
+  var used = DB.redemptions.some(function(r){ return r.gift_id === id && (r.status === 'pending' || r.status === 'approved'); });
+  if(used){ toast('该物品有未完成的兑换申请，暂不能删除','bad'); return; }
+  if(!window.confirm('删除物品「' + g.cat + ' · ' + g.name + '」？历史兑换记录会保留物品名称。')) return;
+  DB.gifts = DB.gifts.filter(function(x){ return x.id !== id; });
+  logAct('删除物品', g.cat + ' · ' + g.name);
+  saveDB(); render();
+  toast('已删除','ok');
+}
+function stockForm(id){
+  var g = DB.gifts.filter(function(x){ return x.id === id; })[0];
+  if(!g) return;
+  var html = '<form id="formStock" class="form" novalidate>'
+    + '<input type="hidden" name="id" value="' + id + '">'
+    + '<p class="hint">' + esc(g.cat + ' · ' + g.name) + ' 当前库存 <b class="mono">' + g.stock + '</b> 件。</p>'
+    + '<label class="field">入库数量（正数入库，负数出库）<input type="number" name="n" step="1" required value="10"></label>'
+    + '<label class="field">或直接设为<input type="number" name="abs" step="1" min="0" placeholder="留空则按入库数量计算"></label>'
+    + '<div class="dlg-actions"><button class="btn" type="button" data-act="close-dlg">取消</button><button class="btn-accent" type="submit">确认</button></div></form>';
+  showDlg('库存计数 · ' + g.name, html);
+}
+function submitStock(f){
+  if(!need('gift.stock')) return;
+  var id = f.elements.id.value;
+  var g = DB.gifts.filter(function(x){ return x.id === id; })[0];
+  if(!g) return;
+  var abs = f.elements.abs.value;
+  var before = g.stock;
+  if(String(abs).trim() !== ''){ g.stock = Math.max(0, num(abs)); }
+  else { g.stock = Math.max(0, g.stock + num(f.elements.n.value)); }
+  logAct('库存调整', g.cat + ' · ' + g.name + '：' + before + ' → ' + g.stock);
+  saveDB(); closeDlg(); render();
+  toast('库存已更新为 ' + g.stock + ' 件','ok');
+}
+
+/* ============ 审核中心 ============ */
+function vReview(){
+  var sub = '<div class="seg" role="group" aria-label="审核视图">'
+    + ['pending','issues','logs'].map(function(k){
+        var label = { pending:'待审批', issues:'异常检测', logs:'操作日志' }[k];
+        var n = k === 'pending' ? DB.approvals.filter(function(a){ return a.status === 'pending'; }).length : 0;
+        return '<button type="button" data-act="review-tab" data-mode="' + k + '" class="' + (UI.review === k ? 'is-on' : '') + '">' + label + (n ? ' ' + n : '') + '</button>';
+      }).join('') + '</div>';
+
+  var body = '';
+  if(UI.review === 'pending'){
+    var list = DB.approvals.slice().sort(function(a,b){ return a.applied_at < b.applied_at ? 1 : -1; });
+    var rows = list.map(function(a){
+      var acts = '';
+      if(a.status === 'pending' && can('points.approve')){
+        acts = '<button class="btn btn-sm" type="button" data-act="ap-approve" data-id="' + a.id + '">通过</button> <button class="btn btn-sm" type="button" data-act="ap-reject" data-id="' + a.id + '">驳回</button>';
+      } else {
+        acts = '<span class="dim">' + (a.status === 'pending' ? '待管理员处理' : (a.reviewer || '')) + '</span>';
+      }
+      var stMap = { pending:['wait','待审批'], approved:['ok','已通过'], rejected:['bad','已驳回'] };
+      var s = stMap[a.status] || ['', a.status];
+      return '<tr><td class="mono dim nowrap">' + esc(a.applied_at) + '</td>'
+        + '<td>' + esc(a.member_name) + '</td>'
+        + '<td class="num" style="color:' + (a.delta >= 0 ? 'var(--ok)' : 'var(--danger)') + '">' + (a.delta > 0 ? '+' : '') + p1(a.delta) + '</td>'
+        + '<td>' + esc(a.item) + '</td><td class="dim">' + esc(a.reason || '') + '</td>'
+        + '<td class="dim">' + esc(a.applicant) + '</td>'
+        + '<td><span class="badge ' + s[0] + '">' + s[1] + '</span></td>'
+        + '<td class="nowrap">' + acts + '</td></tr>';
+    }).join('');
+    body = '<section class="panel"><div class="phead"><h3>积分调整审批</h3><span class="count">' + list.length + ' 条</span></div>'
+      + '<p class="hint" style="margin-bottom:10px">审计提交的积分调整需管理员审批，通过后自动写入流水并生效。</p>'
+      + '<div class="tbl-wrap"><table><thead><tr><th scope="col">提交时间</th><th scope="col">会员</th><th scope="col" class="num">变更</th><th scope="col">事项</th><th scope="col">原因</th><th scope="col">申请人</th><th scope="col">状态</th><th scope="col">操作</th></tr></thead><tbody>'
+      + (rows || '<tr><td colspan="8" class="empty">暂无审批单</td></tr>') + '</tbody></table></div></section>';
+  } else if(UI.review === 'issues'){
+    var issues = auditIssues();
+    body = '<section class="panel"><div class="phead"><h3>制度执行异常</h3><span class="count">' + issues.length + ' 项</span></div>'
+      + (issues.length ? issues.map(function(i){
+          return '<div class="issue"><span class="tag ' + (i[2] === 'high' ? 'high' : (i[2] === 'mid' ? 'mid' : '')) + '">' + esc(i[0]) + '</span>'
+            + '<span style="flex:1">' + esc(i[1]) + '</span>'
+            + (i[3] ? '<button class="btn-ghost btn-sm" type="button" data-act="tab" data-view="' + i[3] + '">查看</button>' : '')
+            + '</div>';
+        }).join('') : '<p class="empty">未发现异常</p>')
+      + '</section>';
+  } else {
+    var logs = DB.logs.slice(0, 200).map(function(l){
+      return '<tr><td class="mono dim nowrap">' + esc(l.time) + '</td><td>' + esc(l.user) + ' <span class="dim">' + esc(ROLE_NAME[l.role] || l.role) + '</span></td>'
+        + '<td>' + esc(l.action) + '</td><td class="dim">' + esc(l.detail) + '</td></tr>';
+    }).join('');
+    body = '<section class="panel"><div class="phead"><h3>操作日志</h3><span class="count">最近 ' + DB.logs.length + ' 条</span></div>'
+      + '<div class="tbl-wrap"><table><thead><tr><th scope="col">时间</th><th scope="col">操作人</th><th scope="col">动作</th><th scope="col">详情</th></tr></thead><tbody>'
+      + (logs || '<tr><td colspan="4" class="empty">暂无日志</td></tr>') + '</tbody></table></div>'
+      + '<p class="hint" style="margin-top:10px">日志与数据同存于本机浏览器，适合内部留痕；不可篡改的审计需接入服务端。</p></section>';
+  }
+  return vhead('审核中心', '审批单、异常检测与全量操作留痕', sub) + body;
+}
+function auditIssues(){
+  var out = [];
+  var st = allStats();
+  st.forEach(function(s){
+    if(s.m.status === 'removed') return;
+    if(s.idle >= DB.config.dive_kick){
+      out.push(['除名预警', s.m.name + ' 已 ' + s.idle + ' 天未活跃，超过 ' + DB.config.dive_kick + ' 天，按细则应清除会籍', 'high', 'members']);
+    } else if(s.idle >= DB.config.dive_warn){
+      out.push(['潜水预警', s.m.name + ' 已 ' + s.idle + ' 天未活跃，超过 ' + DB.config.dive_warn + ' 天，应清积分降一级', 'mid', 'members']);
+    }
+    if(s.earned >= DB.config.cap){
+      out.push(['积分封顶', s.m.name + ' 累计积分已达 ' + DB.config.cap + ' 分上限，后续加分不再累计', 'mid', 'members']);
+    }
+  });
+  DB.redemptions.forEach(function(r){
+    if(r.status !== 'pending') return;
+    var s = statsOf(DB.members[r.member_id]);
+    if(!s) return;
+    if(!s.eligible){
+      out.push(['资格不符', r.id + ' ' + r.member_name + ' 的申请不满足兑换资格：' + s.reasons.join('；'), 'high', 'redeem']);
+    }
+  });
+  DB.redemptions.forEach(function(r){
+    if(r.status === 'approved' && r.approved_at && daysBetween(r.approved_at) > 10){
+      out.push(['发放超时', r.id + ' 核定已 ' + daysBetween(r.approved_at) + ' 天，超过 10 个工作日的发放时效', 'mid', 'redeem']);
+    }
+  });
+  DB.gifts.forEach(function(g){
+    if(g.stock === 0){ out.push(['库存告罄', g.cat + ' · ' + g.name + ' 库存为 0，相关兑换已无法核定', 'mid', 'gifts']); }
+  });
+  DB.approvals.forEach(function(a){
+    if(a.status === 'pending' && a.applied_at && daysBetween(a.applied_at.slice(0,10)) > 2){
+      out.push(['审批超时', a.member_name + ' 的积分调整申请已提交 ' + daysBetween(a.applied_at.slice(0,10)) + ' 天未处理', 'mid', 'review']);
+    }
+  });
+  DB.ledger.forEach(function(e){
+    if(Math.abs(e.points) >= 200 && e.item !== '历史积分结转'){
+      out.push(['大额流水', e.member_name + ' 在 ' + e.date + ' 产生 ' + p1(e.points) + ' 分变动（' + e.item + '），建议复核', 'info', 'ledger']);
+    }
+  });
+  return out;
+}
+function apFind(id){ return DB.approvals.filter(function(a){ return a.id === id; })[0]; }
+function approveAp(id){
+  if(!need('points.approve')) return;
+  var a = apFind(id);
+  if(!a || a.status !== 'pending') return;
+  var m = DB.members[a.member_id];
+  if(!m){ toast('会员已删除，无法执行','bad'); return; }
+  if(!window.confirm('通过「' + a.member_name + '」的积分调整：' + (a.delta > 0 ? '+' : '') + p1(a.delta) + ' 分？\n\n通过后将立即写入流水并生效。')) return;
+  var applied = applyPoints(a.member_id, a.item, a.delta, todayStr(), a.reason || '', '审批通过');
+  a.status = 'approved'; a.reviewer = SESS.u; a.reviewed_at = nowStr(); a.applied_points = applied;
+  logAct('审批通过', a.member_name + ' ' + (a.delta > 0 ? '+' : '') + p1(a.delta) + ' 分 · ' + a.item);
+  saveDB(); render();
+  toast('已通过并生效 ' + p1(applied) + ' 分','ok');
+}
+function rejectAp(id){
+  if(!need('points.approve')) return;
+  var a = apFind(id);
+  if(!a || a.status !== 'pending') return;
+  var why = window.prompt('驳回原因：', '依据不足');
+  if(why === null) return;
+  a.status = 'rejected'; a.reviewer = SESS.u; a.reviewed_at = nowStr(); a.review_note = why || '';
+  logAct('审批驳回', a.member_name + ' 的积分调整申请 · ' + (why || ''));
+  saveDB(); render();
+  toast('已驳回','ok');
+}
+
+/* ============ 等级规则 ============ */
+function vRules(){
+  var c = DB.config;
+  var lvRows = LEVELS.map(function(l){
+    return '<tr><td>' + l.patch + '标</td><td>' + l.name + '</td><td class="num">≥ ' + l.min + '</td>'
+      + '<td class="num">' + c.ratios[l.k] + ' 元/分</td><td class="dim">' + esc(l.desc) + '</td></tr>';
+  }).join('');
+  var earnRows = EARN_ITEMS.map(function(i){ return '<tr><td>' + esc(i.label) + '</td><td class="num" style="color:var(--ok)">+' + i.points + '</td></tr>'; }).join('');
+  var dedRows = DEDUCT_ITEMS.map(function(i){ return '<tr><td>' + esc(i.label) + '</td><td class="num" style="color:var(--danger)">' + i.points + '</td></tr>'; }).join('');
+
+  var cfgForm = '';
+  if(can('points.approve')){
+    cfgForm = '<section class="panel"><div class="phead"><h3>规则参数</h3><span class="count">仅管理员可改</span></div>'
+      + '<form id="formCfg" class="form"><div class="frow">'
+      + '<label class="field">俱乐部名称<input type="text" name="club" value="' + esc(c.club) + '" maxlength="20"></label>'
+      + '<label class="field">累计积分封顶<input type="number" name="cap" value="' + c.cap + '" step="10" min="100"></label>'
+      + '<label class="field">兑换资格线（分）<input type="number" name="min_redeem" value="' + c.min_redeem + '" step="10" min="0"></label>'
+      + '<label class="field">兑换持有时长（月）<input type="number" name="hold_months" value="' + c.hold_months + '" step="1" min="0"></label>'
+      + '<label class="field">兑换上限（分）<input type="number" name="max_redeem_points" value="' + c.max_redeem_points + '" step="10" min="0"></label>'
+      + '<label class="field">基础积分价值（元/分）<input type="number" name="point_value" value="' + c.point_value + '" step="0.05" min="0"></label>'
+      + '<label class="field">潜水预警（天）<input type="number" name="dive_warn" value="' + c.dive_warn + '" step="1" min="1"></label>'
+      + '<label class="field">潜水除名（天）<input type="number" name="dive_kick" value="' + c.dive_kick + '" step="1" min="1"></label>'
+      + '</div><div class="frow">'
+      + '<label class="field">成员倍率<input type="number" name="r_member" value="' + c.ratios.member + '" step="0.05" min="0"></label>'
+      + '<label class="field">普通倍率<input type="number" name="r_normal" value="' + c.ratios.normal + '" step="0.05" min="0"></label>'
+      + '<label class="field">VIP 倍率<input type="number" name="r_vip" value="' + c.ratios.vip + '" step="0.05" min="0"></label>'
+      + '<label class="field">SVIP 倍率<input type="number" name="r_svip" value="' + c.ratios.svip + '" step="0.05" min="0"></label>'
+      + '<label class="field">管理岗倍率<input type="number" name="r_staff" value="' + c.ratios.staff + '" step="0.05" min="0"></label>'
+      + '</div><div class="row" style="justify-content:flex-end"><button class="btn-accent" type="submit">保存参数</button></div></form></section>';
+  }
+
+  return vhead('等级规则', '积分兑换总则、等级划分、计分口径与管理细则', '<span class="count">制度版本 v1.0</span>')
+    + '<div class="grid2">'
+    + '<section class="panel"><div class="phead"><h3>积分兑换总则</h3></div><ul class="list">'
+    + '<li><span>积分价值</span><span class="dim" style="text-align:right">1 积分 = ' + c.point_value + ' 元起，按等级阶梯计价</span></li>'
+    + '<li><span>兑换资格</span><span class="dim">可用 ≥ ' + c.min_redeem + ' 分且入群满 ' + c.hold_months + ' 个月</span></li>'
+    + '<li><span>积分封顶</span><span class="dim">累计上限 ' + c.cap + ' 分，超出不再累计</span></li>'
+    + '<li><span>兑换额度</span><span class="dim">单次及累计 ≤ ' + c.max_redeem_points + ' 分</span></li>'
+    + '<li><span>兑换对象</span><span class="dim">等价物品，不兑现、不找零、不转让</span></li>'
+    + '<li><span>兑换流程</span><span class="dim">申请 → 核定 → 扣分扣库存 → 10 个工作日发放</span></li>'
+    + '</ul></section>'
+    + '<section class="panel"><div class="phead"><h3>会员等级与队标</h3></div><div class="tbl-wrap"><table><thead><tr><th scope="col">队标</th><th scope="col">等级</th><th scope="col" class="num">门槛</th><th scope="col" class="num">倍率</th><th scope="col">权益</th></tr></thead><tbody>' + lvRows + '</tbody></table></div>'
+    + '<p class="hint" style="margin-top:10px">黑色队标为管理岗；等级按历史累计积分判定，不因兑换消耗下降。</p></section>'
+    + '</div>'
+    + '<div class="grid2">'
+    + '<section class="panel"><div class="phead"><h3>积分获取</h3></div><div class="tbl-wrap"><table><thead><tr><th scope="col">事项</th><th scope="col" class="num">积分</th></tr></thead><tbody>' + earnRows + '</tbody></table></div></section>'
+    + '<section class="panel"><div class="phead"><h3>违规扣分</h3></div><div class="tbl-wrap"><table><thead><tr><th scope="col">事项</th><th scope="col" class="num">积分</th></tr></thead><tbody>' + dedRows + '</tbody></table></div></section>'
+    + '</div>'
+    + '<section class="panel"><div class="phead"><h3>管理细则</h3></div><ul class="list">'
+    + '<li><span>积分登记</span><span class="dim" style="text-align:right;max-width:62%">活动结束后 3 个工作日内登记，会员可查询明细</span></li>'
+    + '<li><span>积分核查</span><span class="dim" style="text-align:right;max-width:62%">有异议可提交「归野会员事务」，理事会 3 日内复核</span></li>'
+    + '<li><span>禁止行为</span><span class="dim" style="text-align:right;max-width:62%">积分严禁买卖、转让、代刷，违者清零并取消资格</span></li>'
+    + '<li><span>退出俱乐部</span><span class="dim" style="text-align:right;max-width:62%">主动退会，剩余积分清零，兑换资格失效</span></li>'
+    + '<li><span>制度修订</span><span class="dim" style="text-align:right;max-width:62%">理事会可调整物品库与规则，群内提前公示</span></li>'
+    + '</ul></section>'
+    + cfgForm
+    + vPurgePanel();
+}
+function submitCfg(f){
+  if(!need('points.approve')) return;
+  var c = DB.config;
+  c.club = f.elements.club.value.trim() || c.club;
+  c.cap = num(f.elements.cap.value);
+  c.min_redeem = num(f.elements.min_redeem.value);
+  c.hold_months = num(f.elements.hold_months.value);
+  c.max_redeem_points = num(f.elements.max_redeem_points.value);
+  c.point_value = num(f.elements.point_value.value);
+  c.dive_warn = num(f.elements.dive_warn.value);
+  c.dive_kick = num(f.elements.dive_kick.value);
+  c.ratios = { member:num(f.elements.r_member.value), normal:num(f.elements.r_normal.value),
+    vip:num(f.elements.r_vip.value), svip:num(f.elements.r_svip.value), staff:num(f.elements.r_staff.value) };
+  logAct('修改规则参数', '封顶 ' + c.cap + ' 分，资格线 ' + c.min_redeem + ' 分，持有 ' + c.hold_months + ' 个月');
+  saveDB();
+  $('hdrClub').textContent = c.club;
+  render();
+  toast('规则参数已保存','ok');
+}
+
+/* ============ 账号 ============ */
+function vAccounts(){
+  var list = Object.keys(ACCS).map(function(k){ return ACCS[k]; }).sort(function(a,b){
+    var order = { admin:0, auditor:1, member:2 };
+    return order[a.role] - order[b.role] || (a.u < b.u ? -1 : 1);
+  });
+  var rows = list.map(function(a){
+    var p = a.role === 'member' ? (DB.members[a.member_id] ? '正常' : '会员已删除') : '正常';
+    return '<tr><td class="mono">' + esc(a.u) + '</td><td>' + esc(a.name) + '</td>'
+      + '<td><span class="role-chip ' + a.role + '">' + ROLE_NAME[a.role] + '</span></td>'
+      + '<td class="mono dim">' + esc(mask(a.phone) || '—') + '</td>'
+      + '<td>' + (a.def ? '<span class="badge wait">默认密码</span>' : '<span class="badge ok">已改密</span>') + '</td>'
+      + '<td class="dim">' + esc(a.updated || '') + '</td>'
+      + '<td class="nowrap"><button class="btn btn-sm" type="button" data-act="acc-reset" data-id="' + esc(a.u) + '">重置密码</button> '
+      + '<button class="btn btn-sm" type="button" data-act="acc-phone" data-id="' + esc(a.u) + '">手机号</button></td></tr>';
+  }).join('');
+
+  var matrix = [
+    ['查看会员 / 流水 / 兑换记录','✓','✓','仅自己'],
+    ['增删改会员','✓','✓','—'],
+    ['登记积分（直接生效）','✓','—','—'],
+    ['提交积分调整申请','—','✓','—'],
+    ['审批积分调整','✓','—','—'],
+    ['新增 / 编辑 / 删除物品','✓','✓','—'],
+    ['调整库存计数','✓','—','—'],
+    ['兑换核定 / 驳回','✓','✓','—'],
+    ['标记发放','✓','—','—'],
+    ['操作日志与异常检测','✓','✓','—'],
+    ['规则参数 / 账号管理','✓','—','—']
+  ].map(function(r){
+    return '<tr><td>' + esc(r[0]) + '</td><td class="num">' + r[1] + '</td><td class="num">' + r[2] + '</td><td class="num">' + r[3] + '</td></tr>';
+  }).join('');
+
+  return vhead('账号与权限', '账号与会员名单自动同步，密码可由本人修改',
+      '<button class="btn" type="button" data-act="data-export">导出数据</button>'
+      + '<label class="btn" style="cursor:pointer">导入数据<input type="file" id="importFile" accept="application/json,.json" hidden></label>'
+      + '<button class="btn-danger btn" type="button" data-act="data-reset">重置示例数据</button>')
+    + '<div class="notice">新增会员时自动创建同名账号（账号 = 会员编号，默认密码 <code>' + DEFAULT_PW + '</code>），删除会员时账号同步停用。所有账号都绑定手机号，可用于自助找回密码。</div>'
+    + '<div class="grid2">'
+    + '<section class="panel"><div class="phead"><h3>账号列表</h3><span class="count">' + list.length + ' 个</span></div>'
+    + '<div class="tbl-wrap"><table><thead><tr><th scope="col">账号</th><th scope="col">名称</th><th scope="col">角色</th><th scope="col">手机号</th><th scope="col">密码</th><th scope="col">更新时间</th><th scope="col">操作</th></tr></thead><tbody>'
+    + rows + '</tbody></table></div></section>'
+    + '<section class="panel"><div class="phead"><h3>权限矩阵</h3></div>'
+    + '<div class="tbl-wrap"><table><thead><tr><th scope="col">能力</th><th scope="col" class="num">管理</th><th scope="col" class="num">审计</th><th scope="col" class="num">会员</th></tr></thead><tbody>'
+    + matrix + '</tbody></table></div></section>'
+    + '</div>';
+}
+function accReset(u){
+  if(!need('account.manage')) return;
+  var a = ACCS[u];
+  if(!a) return;
+  if(!window.confirm('把「' + a.name + '」（' + u + '）的密码重置为默认密码 ' + DEFAULT_PW + '？')) return;
+  a.hash = pwHash(u, DEFAULT_PW); a.def = true; a.updated = todayStr();
+  logAct('重置密码', u + ' 的密码已重置为默认密码');
+  saveAccs(); render();
+  toast('已重置为默认密码 ' + DEFAULT_PW,'ok');
+}
+function accPhone(u){
+  if(!need('account.manage')) return;
+  var a = ACCS[u];
+  if(!a) return;
+  var html = '<form id="formPhone" class="form" novalidate><input type="hidden" name="u" value="' + esc(u) + '">'
+    + '<p class="hint">账号 ' + esc(u) + ' 当前绑定手机号：' + esc(mask(a.phone) || '未绑定') + '</p>'
+    + '<label class="field">新手机号<input type="tel" name="phone" required inputmode="numeric" autocomplete="tel" maxlength="13" value="' + esc(a.phone) + '"></label>'
+    + '<p class="hint">修改后可用于验证码找回密码。会员账号的手机号与会员资料同步，请在「会员」中修改。</p>'
+    + '<div class="dlg-actions"><button class="btn" type="button" data-act="close-dlg">取消</button><button class="btn-accent" type="submit">保存</button></div></form>';
+  showDlg('修改绑定手机号', html);
+}
+function submitPhone(f){
+  if(!need('account.manage')) return;
+  var u = f.elements.u.value;
+  var a = ACCS[u];
+  var phone = f.elements.phone.value.replace(/\D/g,'');
+  if(!a) return;
+  if(phone.length !== 11){ toast('手机号需为 11 位','bad'); return; }
+  if(a.role === 'member'){ toast('会员手机号请到「会员」中修改，会自动同步','bad'); return; }
+  a.phone = phone; a.updated = todayStr();
+  logAct('修改绑定手机号', u + ' → ' + mask(phone));
+  saveAccs(); closeDlg(); render();
+  toast('手机号已更新','ok');
+}
+/* ============ 流水定期清理 ============ */
+function purgeCutoff(){
+  var months = Math.max(1, num(DB.config.purge_months) || 12);
+  return daysAgo(Math.round(months * 30.44));
+}
+function purgeDue(){
+  var cutoff = purgeCutoff();
+  return DB.ledger.filter(function(e){ return String(e.date) < cutoff; });
+}
+function purgeIsDue(){
+  var c = DB.config, mt = DB.maintenance || {};
+  if(!c.purge_on) return false;
+  if(!mt.last_purge) return true;
+  return daysBetween(mt.last_purge) >= Math.max(1, num(c.purge_gap) || 30);
+}
+function purgeLedger(manual){
+  var list = purgeDue();
+  var cutoff = purgeCutoff();
+  DB.maintenance = DB.maintenance || { last_purge:'', last_count:0, last_mode:'' };
+  if(!list.length){
+    DB.maintenance.last_purge = todayStr();
+    DB.maintenance.last_count = 0;
+    DB.maintenance.last_mode = manual ? '手动' : '自动';
+    saveDB();
+    return { removed:0, carried:0 };
+  }
+  var keep = DB.ledger.filter(function(e){ return String(e.date) >= cutoff; });
+  var bucket = {};
+  list.forEach(function(e){
+    if(!bucket[e.member_id]){ bucket[e.member_id] = { net:0, n:0, name:e.member_name }; }
+    bucket[e.member_id].net += e.points;
+    bucket[e.member_id].n += 1;
+  });
+  var carried = 0;
+  Object.keys(bucket).forEach(function(mid){
+    var b = bucket[mid];
+    var net = Math.round(b.net * 100) / 100;
+    if(!net) return;
+    carried += 1;
+    keep.push({ id:uid('l','L'), member_id:mid, member_name:b.name || mid, item:'历史积分结转',
+      points:net, date:todayStr(), by:'system', via:'定期清理',
+      note:'结转 ' + b.n + ' 条 ' + cutoff + ' 前的明细，净额 ' + (net > 0 ? '+' : '') + p1(net) + ' 分' });
+  });
+  DB.ledger = keep;
+  DB.maintenance.last_purge = todayStr();
+  DB.maintenance.last_count = list.length;
+  DB.maintenance.last_mode = manual ? '手动' : '自动';
+  logAct('清理积分流水', (manual ? '手动' : '自动') + '清理 ' + list.length + ' 条 ' + cutoff + ' 前明细，为 ' + carried + ' 位会员结转净额');
+  saveDB();
+  return { removed:list.length, carried:carried };
+}
+function autoPurge(){
+  if(!purgeIsDue()){ render(); return; }
+  var r = purgeLedger(false);
+  render();
+  if(r.removed){ toast('已自动清理 ' + r.removed + ' 条超期流水（' + r.carried + ' 位会员结转净额）','ok'); }
+}
+function purgeConfirm(){
+  if(!need('ledger.purge')) return;
+  var list = purgeDue();
+  if(!list.length){ toast('没有超过保留期的流水'); return; }
+  if(!window.confirm('将清理 ' + list.length + ' 条 ' + purgeCutoff() + ' 之前的流水。\n\n为保证累计积分不变，会为每位受影响会员生成一条「历史积分结转」保留净额；被删除的明细不可恢复。\n\n确认清理？')) return;
+  var r = purgeLedger(true);
+  render();
+  toast('已清理 ' + r.removed + ' 条，' + r.carried + ' 位会员结转净额','ok');
+}
+function vPurgePanel(){
+  var c = DB.config, mt = DB.maintenance || {};
+  var due = purgeDue().length;
+  var edit = can('ledger.purge');
+  var form = '';
+  if(edit){
+    form = '<form id="formPurge" class="form" style="margin-top:12px"><div class="frow">'
+      + '<label class="field">自动清理<select name="purge_on">'
+      + '<option value="1"' + (c.purge_on ? ' selected' : '') + '>开启</option>'
+      + '<option value="0"' + (!c.purge_on ? ' selected' : '') + '>关闭</option></select></label>'
+      + '<label class="field">保留期（月）<input type="number" name="purge_months" value="' + (c.purge_months || 12) + '" min="1" max="120" step="1"></label>'
+      + '<label class="field">检查间隔（天）<input type="number" name="purge_gap" value="' + (c.purge_gap || 30) + '" min="1" max="365" step="1"></label>'
+      + '</div><div class="row" style="justify-content:flex-end">'
+      + (due ? '<button class="btn" type="button" data-act="purge-now">立即清理 ' + due + ' 条</button>' : '')
+      + '<button class="btn-accent" type="submit">保存设置</button></div></form>';
+  }
+  return '<section class="panel"><div class="phead"><h3>积分流水维护</h3><span class="count">' + (c.purge_on ? '自动清理已开启' : '自动清理已关闭') + '</span></div>'
+    + '<div class="notice">保留最近 <b>' + (c.purge_months || 12) + '</b> 个月明细，超期部分在下次登录时自动清除；清除前会按会员生成一条「历史积分结转」，累计积分与等级不受影响。上次清理：' + esc(mt.last_purge || '从未') + (mt.last_purge ? '（' + esc(mt.last_mode || '') + ' ' + (mt.last_count || 0) + ' 条）' : '') + '。</div>'
+    + '<ul class="list"><li><span>当前流水条数</span><span class="mono">' + DB.ledger.length + ' 条</span></li>'
+    + '<li><span>超过保留期（' + purgeCutoff() + ' 之前）</span><span class="mono" style="color:' + (due ? 'var(--warn)' : 'var(--ok)') + '">' + due + ' 条</span></li>'
+    + '<li><span>下次自动检查</span><span class="mono dim">' + (c.purge_on ? (mt.last_purge ? (daysBetween(mt.last_purge) >= (c.purge_gap || 30) ? '已到期，下次登录执行' : '约 ' + (Math.max(1, (c.purge_gap || 30) - daysBetween(mt.last_purge))) + ' 天后') : '下次登录执行') : '已关闭') + '</span></li></ul>'
+    + form + '</section>';
+}
+function submitPurge(f){
+  if(!need('ledger.purge')) return;
+  var c = DB.config;
+  c.purge_on = String(f.elements.purge_on.value) === '1';
+  c.purge_months = Math.max(1, Math.round(num(f.elements.purge_months.value) || 12));
+  c.purge_gap = Math.max(1, Math.round(num(f.elements.purge_gap.value) || 30));
+  logAct('修改流水清理设置', (c.purge_on ? '开启' : '关闭') + '，保留 ' + c.purge_months + ' 个月，每 ' + c.purge_gap + ' 天检查');
+  saveDB(); render();
+  toast('清理设置已保存','ok');
+}
+
+/* ============ 表格导入 ============ */
+var IMP = { kind:'', plan:null, errs:[] };
+var IMP_DEF = {
+  member:{
+    title:'导入会员名单',
+    cols:['姓名','手机号','入群日期','状态','管理岗','备注'],
+    sample:[['张三','13800001111','2026-01-15','正常','否','新入会'],
+            ['李四','13800002222','2025-06-01','正常','是','负责后勤']],
+    tip:'姓名必填；手机号相同的行视为同一会员（更新资料），否则新增并自动分配编号与登录账号。状态填「正常」或「除名」，管理岗填「是」或「否」。'
+  },
+  gift:{
+    title:'导入物品库',
+    cols:['类别','名称','最低积分','最高积分','库存','说明'],
+    sample:[['俱乐部周边','定制贴纸','50','80','40','官方周边'],
+            ['加油券','加油券 200 元','180','260','15','按面值核定']],
+    tip:'类别与名称都相同视为同一物品（更新分值与库存），否则新增。积分区间需为正数且最低不超过最高。'
+  },
+  ledger:{
+    title:'导入积分流水',
+    cols:['会员编号','事项','分值','日期','备注'],
+    sample:[['M001','短途骑行','5','2026-10-20',''],
+            ['M002','违反安全规定','-200','2026-10-22','炸街']],
+    tip:'会员编号必须已存在；分值正数加分、负数扣分；日期留空记今天；超出封顶的部分自动截断。'
+  }
+};
+var IMP_KEYS = {
+  member:[['id',['编号','会员编号','ID','账号']],['name',['姓名','名字','会员姓名']],
+          ['phone',['手机号','手机','电话','联系电话']],['joined',['入群日期','入群','加入日期']],
+          ['status',['状态','会员状态']],['staff',['管理岗','是否管理岗','管理']],['note',['备注','说明']]],
+  gift:[['cat',['类别','分类','物品类别']],['name',['名称','物品名称','物品']],
+        ['min',['最低积分','最低','起始积分']],['max',['最高积分','最高','封顶积分']],
+        ['stock',['库存','库存数','数量']],['note',['说明','备注']]],
+  ledger:[['mid',['会员编号','编号','会员']],['item',['事项','项目','积分事项']],
+          ['points',['分值','积分','分数']],['date',['日期','时间']],['note',['备注','说明']]]
+};
+var IMP_REQ = { member:['name'], gift:['cat','name'], ledger:['mid','item','points'] };
+function impHeaderMap(kind, head){
+  var defs = IMP_KEYS[kind] || [];
+  var map = {};
+  defs.forEach(function(d){
+    var key = d[0], alias = d[1];
+    for(var i = 0; i < head.length; i++){
+      var h = String(head[i] || '').replace(/\s|\*|（.*?）|\(.*?\)/g, '');
+      for(var j = 0; j < alias.length; j++){
+        if(h === alias[j] || h.indexOf(alias[j]) >= 0){ map[key] = i; return; }
+      }
+    }
+  });
+  var ok = (IMP_REQ[kind] || []).every(function(k){ return map[k] != null; });
+  return ok ? map : null;
+}
+function pickCell(r, map, key, pos){
+  var i = (map && map[key] != null) ? map[key] : pos;
+  return (i >= 0 && i < r.length) ? String(r[i] == null ? '' : r[i]).trim() : '';
+}
+function parseTable(text){
+  var s = String(text || '').replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').trim();
+  if(!s) return [];
+  var lines = s.split('\n').filter(function(l){ return l.trim() !== ''; });
+  if(!lines.length) return [];
+  var head = lines[0];
+  var delim = ',';
+  if(head.indexOf('\t') >= 0){ delim = '\t'; }
+  else if(head.split(';').length > head.split(',').length){ delim = ';'; }
+  return lines.map(function(line){
+    var cells = [], cur = '', q = false;
+    for(var i = 0; i < line.length; i++){
+      var ch = line.charAt(i);
+      if(q){
+        if(ch === '"'){ if(line.charAt(i+1) === '"'){ cur += '"'; i++; } else { q = false; } }
+        else { cur += ch; }
+      } else if(ch === '"'){ q = true; }
+      else if(ch === delim){ cells.push(cur); cur = ''; }
+      else { cur += ch; }
+    }
+    cells.push(cur);
+    return cells.map(function(c){ return String(c).trim(); });
+  });
+}
+function normDate(v){
+  var s = String(v || '').trim();
+  if(!s) return '';
+  s = s.replace(/[./年月]/g, '-').replace(/日/g, '').replace(/\s+/g, '');
+  var m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
+  if(m){ return m[1] + '-' + pad2(parseInt(m[2],10)) + '-' + pad2(parseInt(m[3],10)); }
+  m = /^(\d{4})(\d{2})(\d{2})$/.exec(s);
+  if(m){ return m[1] + '-' + m[2] + '-' + m[3]; }
+  return '';
+}
+function downloadCsv(name, rows){
+  var csv = '\uFEFF' + rows.map(function(r){
+    return r.map(function(c){
+      var v = String(c == null ? '' : c);
+      return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+    }).join(',');
+  }).join('\r\n');
+  var blob = new Blob([csv], { type:'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name + '.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 800);
+}
+function tplDownload(kind){
+  var d = IMP_DEF[kind];
+  if(!d) return;
+  downloadCsv('归野_' + d.title.replace('导入','') + '_模板', [d.cols].concat(d.sample));
+  toast('模板已下载，可用 Excel 填写后另存为 CSV，或直接粘贴表格','ok');
+}
+function importDlg(kind){
+  var d = IMP_DEF[kind];
+  if(!d) return;
+  var perm = kind === 'member' ? 'member.write' : (kind === 'gift' ? 'gift.write' : 'points.write');
+  if(!need(perm)) return;
+  IMP = { kind:kind, plan:null, errs:[] };
+  var html = '<p class="hint">支持 <b>CSV 文件</b>，或从 Excel / WPS 直接复制整块表格粘贴（Tab 分隔）。第一行请写表头，系统按表头名称自动识别列，<b>列顺序可以不同</b>、多余列会被忽略；识别不到表头时按此顺序读取：'
+    + d.cols.map(function(c){ return '<code>' + esc(c) + '</code>'; }).join(' ')
+    + '。</p>'
+    + '<div class="notice">' + esc(d.tip) + '</div>'
+    + '<div class="row" style="margin:12px 0;gap:8px"><button class="btn btn-sm" type="button" data-act="imp-tpl" data-id="' + kind + '">下载 CSV 模板</button>'
+    + '<label class="btn btn-sm" style="cursor:pointer;margin:0">选择 CSV 文件<input type="file" id="impFile" accept=".csv,.txt,text/csv" style="display:none"></label></div>'
+    + '<label class="field">或粘贴表格内容<textarea id="impText" rows="7" placeholder="' + esc(d.cols.join(',')) + '"></textarea></label>'
+    + '<div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" type="button" data-act="close-dlg">取消</button>'
+    + '<button class="btn-accent" type="button" data-act="imp-parse" data-id="' + kind + '">解析预览</button></div>'
+    + '<div id="impResult"></div>';
+  showDlg(d.title, html);
+}
+function impFileLoad(file){
+  var r = new FileReader();
+  r.onload = function(){
+    var ta = $('impText');
+    if(ta){ ta.value = String(r.result || ''); }
+    impParse(IMP.kind || 'member');
+  };
+  r.readAsText(file, 'utf-8');
+}
+function impBuild(kind, body, map){
+  var errs = [], plan = [];
+  var byPhone = {}, byKey = {};
+  Object.keys(DB.members).forEach(function(k){
+    var m = DB.members[k];
+    if(m.phone){ byPhone[String(m.phone).replace(/\D/g, '')] = m; }
+  });
+  DB.gifts.forEach(function(g){ byKey[g.cat + '\u0001' + g.name] = g; });
+
+  body.forEach(function(r, idx){
+    var line = idx + 2;
+    var blankRow = !r.some(function(c){ return String(c || '') !== ''; });
+    if(blankRow) return;
+    if(kind === 'member'){
+      var name = pickCell(r, map, 'name', 0);
+      if(!name){ errs.push('第 ' + line + ' 行：姓名不能为空'); return; }
+      var rawPhone = pickCell(r, map, 'phone', 1);
+      var phone = rawPhone.replace(/\D/g, '');
+      if(rawPhone && phone.length !== 11){ errs.push('第 ' + line + ' 行：手机号应为 11 位数字（' + rawPhone + '）'); return; }
+      var rawJoined = pickCell(r, map, 'joined', 2);
+      var joined = normDate(rawJoined);
+      if(rawJoined && !joined){ errs.push('第 ' + line + ' 行：入群日期无法识别（' + rawJoined + '），请用 2026-01-15'); return; }
+      var rawStatus = pickCell(r, map, 'status', 3);
+      var st = rawStatus.indexOf('除') >= 0 ? 'removed' : 'active';
+      var staff = /^(是|有|y|yes|true|1|管理|管理岗)$/i.test(pickCell(r, map, 'staff', 4));
+      var byId = DB.members[pickCell(r, map, 'id', -1).toUpperCase()] || null;
+      var hit = byId || ((phone && byPhone[phone]) ? byPhone[phone] : null);
+      plan.push({ mode:hit ? 'up' : 'add', id:hit ? hit.id : '', name:name, phone:phone,
+        joined:joined || todayStr(), status:st, staff:staff, note:pickCell(r, map, 'note', 5) });
+    } else if(kind === 'gift'){
+      var cat = pickCell(r, map, 'cat', 0), gname = pickCell(r, map, 'name', 1);
+      if(!cat || !gname){ errs.push('第 ' + line + ' 行：类别和名称都要填'); return; }
+      var mn = num(pickCell(r, map, 'min', 2)), mx = num(pickCell(r, map, 'max', 3));
+      if(!(mn > 0) || !(mx > 0)){ errs.push('第 ' + line + ' 行：最低/最高积分需为正数'); return; }
+      if(mn > mx){ errs.push('第 ' + line + ' 行：最低积分不能大于最高积分'); return; }
+      var rawStock = pickCell(r, map, 'stock', 4);
+      var stock = rawStock === '' ? null : Math.round(num(rawStock));
+      if(stock !== null && !(num(rawStock) >= 0)){ errs.push('第 ' + line + ' 行：库存需为非负数'); return; }
+      var gh = byKey[cat + '\u0001' + gname];
+      plan.push({ mode:gh ? 'up' : 'add', id:gh ? gh.id : '', cat:cat, name:gname,
+        min:mn, max:mx, stock:stock, note:pickCell(r, map, 'note', 5) });
+    } else {
+      var mid = pickCell(r, map, 'mid', 0).toUpperCase();
+      if(!DB.members[mid]){ errs.push('第 ' + line + ' 行：会员编号不存在（' + (mid || '空') + '）'); return; }
+      var item = pickCell(r, map, 'item', 1);
+      if(!item){ errs.push('第 ' + line + ' 行：事项不能为空'); return; }
+      var pts = num(pickCell(r, map, 'points', 2));
+      if(!pts){ errs.push('第 ' + line + ' 行：分值不能为 0'); return; }
+      var rawDate = pickCell(r, map, 'date', 3);
+      var dt = normDate(rawDate);
+      if(rawDate && !dt){ errs.push('第 ' + line + ' 行：日期无法识别（' + rawDate + '）'); return; }
+      plan.push({ mode:'add', id:mid, item:item, points:pts, date:dt || todayStr(), note:pickCell(r, map, 'note', 4) });
+    }
+  });
+  return { plan:plan, errs:errs };
+}
+function impPreviewHtml(kind, res){
+  var add = res.plan.filter(function(p){ return p.mode === 'add'; }).length;
+  var up = res.plan.length - add;
+  var head = kind === 'member' ? ['动作','姓名','手机号','入群','状态','管理岗']
+    : kind === 'gift' ? ['动作','类别','名称','积分区间','库存','说明']
+    : ['动作','会员','事项','分值','日期','备注'];
+  var rows = res.plan.slice(0, 8).map(function(p){
+    var cells = kind === 'member'
+      ? [p.mode === 'add' ? '新增' : '更新', p.name, p.phone || '—', p.joined, p.status === 'removed' ? '除名' : '正常', p.staff ? '是' : '否']
+      : kind === 'gift'
+      ? [p.mode === 'add' ? '新增' : '更新', p.cat, p.name, p.min + '~' + p.max, p.stock === null ? '不变' : p.stock, p.note || '—']
+      : ['新增', p.id, p.item, (p.points > 0 ? '+' : '') + p1(p.points), p.date, p.note || '—'];
+    return '<tr>' + cells.map(function(c){ return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>';
+  }).join('');
+  return '<section class="panel" style="margin-top:12px"><div class="phead"><h3>解析结果</h3>'
+    + '<span class="count">新增 ' + add + ' · 更新 ' + up + ' · 错误 ' + res.errs.length + '</span></div>'
+    + (res.errs.length ? '<ul class="list" style="color:var(--danger)">' + res.errs.slice(0, 10).map(function(e){ return '<li><span>' + esc(e) + '</span></li>'; }).join('') + '</ul>' + (res.errs.length > 10 ? '<p class="hint">另有 ' + (res.errs.length - 10) + ' 条错误未显示。</p>' : '') : '')
+    + (res.plan.length ? '<div class="tbl-wrap"><table><thead><tr>' + head.map(function(h){ return '<th scope="col">' + h + '</th>'; }).join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="empty">没有可导入的行</p>')
+    + (res.plan.length > 8 ? '<p class="hint">仅预览前 8 条，共 ' + res.plan.length + ' 条待导入。</p>' : '')
+    + '<div class="row" style="justify-content:flex-end;margin-top:10px">'
+    + '<button class="btn" type="button" data-act="close-dlg">取消</button>'
+    + (res.plan.length ? '<button class="btn-accent" type="button" data-act="imp-apply" data-id="' + kind + '">确认导入 ' + res.plan.length + ' 条</button>' : '')
+    + '</div></section>';
+}
+function impParse(kind){
+  var d = IMP_DEF[kind];
+  if(!d) return;
+  var ta = $('impText');
+  var rows = parseTable(ta ? ta.value : '');
+  if(rows.length < 2){ toast('至少需要一行表头和一行数据','bad'); return; }
+  var map = impHeaderMap(kind, rows[0]);
+  var res = impBuild(kind, rows.slice(1), map);
+  IMP.plan = res.plan; IMP.errs = res.errs; IMP.kind = kind;
+  var box = $('impResult');
+  if(box){ box.innerHTML = impPreviewHtml(kind, res); }
+  if(!res.plan.length){ toast('没有可导入的数据，请检查列顺序和内容','bad'); return; }
+  toast('解析完成：' + res.plan.length + ' 条可导入' + (res.errs.length ? '，' + res.errs.length + ' 条错误' : ''), res.errs.length ? 'bad' : 'ok');
+}
+function impApply(kind){
+  var perm = kind === 'member' ? 'member.write' : (kind === 'gift' ? 'gift.write' : 'points.write');
+  if(!need(perm)) return;
+  var plan = IMP.plan || [];
+  if(!plan.length){ toast('没有可导入的数据','bad'); return; }
+  var add = 0, up = 0, pts = 0, capped = 0;
+  if(kind === 'member'){
+    plan.forEach(function(p){
+      if(p.mode === 'add'){
+        var id = uid('m','M');
+        DB.members[id] = { id:id, name:p.name, phone:p.phone, joined:p.joined, last_active:todayStr(),
+          staff:p.staff, status:p.status, note:p.note };
+        add++;
+      } else {
+        var m = DB.members[p.id];
+        if(!m) return;
+        m.name = p.name;
+        if(p.phone){ m.phone = p.phone; }
+        if(p.joined){ m.joined = p.joined; }
+        m.staff = p.staff; m.status = p.status;
+        if(p.note){ m.note = p.note; }
+        up++;
+      }
+    });
+    syncMemberAccounts();
+  } else if(kind === 'gift'){
+    plan.forEach(function(p){
+      if(p.mode === 'add'){
+        DB.gifts.push({ id:uid('g','G'), cat:p.cat, name:p.name, min:p.min, max:p.max,
+          stock:(can('gift.stock') && p.stock !== null) ? p.stock : 0, note:p.note });
+        add++;
+      } else {
+        var g = DB.gifts.filter(function(x){ return x.id === p.id; })[0];
+        if(!g) return;
+        g.min = p.min; g.max = p.max;
+        if(p.note){ g.note = p.note; }
+        if(can('gift.stock') && p.stock !== null){ g.stock = p.stock; }
+        up++;
+      }
+    });
+  } else {
+    plan.forEach(function(p){
+      var applied = applyPoints(p.id, p.item, p.points, p.date, p.note, '表格导入');
+      add++;
+      if(applied){ pts += applied; if(Math.abs(applied - p.points) > 0.001){ capped++; } }
+    });
+  }
+  logAct('表格导入', IMP_DEF[kind].title + '：新增 ' + add + ' 条' + (up ? '，更新 ' + up + ' 条' : '') + (kind === 'ledger' ? '，合计 ' + p1(pts) + ' 分' : ''));
+  saveDB(); closeDlg(); render();
+  IMP.plan = null;
+  toast(kind === 'ledger'
+    ? ('已导入 ' + add + ' 条流水，合计 ' + p1(pts) + ' 分' + (capped ? '（' + capped + ' 条按封顶截断）' : ''))
+    : ('导入完成：新增 ' + add + ' 条' + (up ? '，更新 ' + up + ' 条' : '')), 'ok');
+}
+function purgeNotice(){
+  var c = DB.config, mt = DB.maintenance || {};
+  if(!c.purge_on){ return '<div class="notice">流水自动清理已关闭，明细长期保留。管理员可在「等级规则」页开启。</div>'; }
+  return '<div class="notice">流水自动清理：保留最近 <b>' + (c.purge_months || 12) + '</b> 个月，每 ' + (c.purge_gap || 30) + ' 天检查一次；上次清理 ' + esc(mt.last_purge || '—') + '。超期明细清除前会按会员生成「历史积分结转」，积分与等级不变。</div>';
+}
+
+function exportData(){
+  if(!can('data.export')){ toast('当前角色无此权限','bad'); return; }
+  var payload = { exported_at:nowStr(), version:2, db:DB };
+  var blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '归野积分数据_' + todayStr() + '.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 800);
+  logAct('导出数据', '导出全量数据 JSON');
+  saveDB();
+  toast('已导出 JSON','ok');
+}
+function importData(file){
+  if(!can('data.import')){ toast('当前角色无此权限','bad'); return; }
+  var r = new FileReader();
+  r.onload = function(){
+    try{
+      var p = JSON.parse(String(r.result));
+      var d = p.db || p;
+      if(!d.members || !d.ledger){ throw new Error('格式不符'); }
+      if(!window.confirm('导入将覆盖当前全部数据，确认继续？')) return;
+      DB = d;
+      DB.config = Object.assign({}, CFG_DEFAULT, DB.config || {});
+      DB.config.ratios = Object.assign({}, CFG_DEFAULT.ratios, DB.config.ratios || {});
+      DB.gifts = DB.gifts || []; DB.approvals = DB.approvals || []; DB.logs = DB.logs || [];
+      DB.seq = Object.assign({ m:0, l:0, r:0, g:0, a:0, log:0 }, DB.seq || {});
+      syncMemberAccounts();
+      logAct('导入数据', '导入 ' + Object.keys(DB.members).length + ' 位会员、' + DB.ledger.length + ' 条流水');
+      saveDB(); render();
+      toast('数据已导入','ok');
+    }catch(e){ toast('导入失败：文件格式不正确','bad'); }
+  };
+  r.readAsText(file);
+}
+function resetData(){
+  if(!can('data.reset')){ toast('当前角色无此权限','bad'); return; }
+  if(!window.confirm('重置为示例数据？当前所有会员、流水、兑换记录都会被清空，此操作不可撤销。')) return;
+  seed(); syncMemberAccounts(); saveDB(); render();
+  toast('已重置为示例数据','ok');
+}
+
+/* ============ 会员自助 ============ */
+function vMyPoints(){
+  var m = DB.members[SESS.member_id];
+  if(!m){ return vhead('我的积分','账号关联的会员已不存在','') + '<p class="empty">请联系管理员</p>'; }
+  var s = statsOf(m), p = patchOf(s);
+  var lv = s.next
+    ? '距 ' + s.next.name + ' 还差 ' + p1(Math.max(0, s.next.min - s.earned)) + ' 分'
+    : '已达最高等级';
+  var lvRows = DB.ledger.filter(function(e){ return e.member_id === m.id; }).sort(function(a,b){ return a.date < b.date ? 1 : -1; }).slice(0,20).map(function(e){
+    return '<tr><td class="mono dim nowrap">' + esc(e.date) + '</td><td>' + esc(e.item) + '</td><td class="num" style="color:' + (e.points >= 0 ? 'var(--ok)' : 'var(--danger)') + '">' + (e.points > 0 ? '+' : '') + p1(e.points) + '</td></tr>';
+  }).join('');
+  var rds = DB.redemptions.filter(function(r){ return r.member_id === m.id; }).map(function(r){
+    return '<tr><td class="mono dim nowrap">' + esc(r.created_at) + '</td><td>' + esc(r.gift_name) + '</td><td class="num">' + p1(r.points) + '</td><td>' + rdBadge(r.status) + '</td></tr>';
+  }).join('');
+
+  return vhead('我的积分', m.name + ' · ' + m.id, '')
+    + '<div class="kpis">'
+    + '<div class="kpi"><p>可用积分</p><b>' + p1(s.available) + '<i>分</i></b></div>'
+    + '<div class="kpi"><p>累计获得</p><b>' + p1(s.earned) + '<i>分</i></b></div>'
+    + '<div class="kpi"><p>已兑换</p><b>' + p1(s.redeemed) + '<i>分</i></b></div>'
+    + '<div class="kpi"><p>折算价值</p><b>' + money(s.available * s.ratio) + '</b></div>'
+    + '</div>'
+    + '<div class="grid2">'
+    + '<section class="panel"><div class="phead"><h3>我的等级</h3></div>'
+    + '<p><span class="patch ' + p.cls + '">' + p.txt + '</span></p>'
+    + '<p class="hint" style="margin-top:10px">' + lv + '</p><div class="bar"><i style="width:' + (s.next ? Math.min(100, Math.round((s.earned - s.level.min) / Math.max(1, s.next.min - s.level.min) * 100)) : 100) + '%"></i></div>'
+    + '<p class="hint" style="margin-top:12px">兑换资格：' + (s.eligible ? '<span class="badge ok">已具备</span>' : '<span class="badge bad">不具备</span> ' + esc(s.reasons.join('；'))) + '</p></section>'
+    + '<section class="panel"><div class="phead"><h3>我的兑换</h3></div><div class="tbl-wrap"><table><thead><tr><th scope="col">日期</th><th scope="col">物品</th><th scope="col" class="num">积分</th><th scope="col">状态</th></tr></thead><tbody>'
+    + (rds || '<tr><td colspan="4" class="empty">还没有兑换记录</td></tr>') + '</tbody></table></div></section>'
+    + '</div>'
+    + '<section class="panel"><div class="phead"><h3>积分明细</h3><span class="count">最近 20 条</span></div>'
+    + '<div class="tbl-wrap"><table><thead><tr><th scope="col">日期</th><th scope="col">事项</th><th scope="col" class="num">分值</th></tr></thead><tbody>'
+    + (lvRows || '<tr><td colspan="3" class="empty">暂无流水</td></tr>') + '</tbody></table></div></section>';
+}
+function vMyShop(){
+  var m = DB.members[SESS.member_id];
+  var s = m ? statsOf(m) : null;
+  var cards = DB.gifts.map(function(g){
+    var canR = s && s.eligible && g.stock > 0 && s.available >= g.min;
+    var st = !g.stock ? ['bad','缺货'] : (!s || !s.eligible ? ['','资格不足'] : (s.available < g.min ? ['warn','积分不足'] : ['ok','可兑换']));
+    return '<div class="gift"><h4>' + esc(g.name) + '</h4><p class="meta">' + esc(g.cat) + '</p>'
+      + '<p class="price">' + g.min + '~' + g.max + ' 分</p>'
+      + '<p class="meta">折算约 ' + money(g.min * (s ? s.ratio : 0.25)) + ' 起 · 库存 ' + g.stock + '</p>'
+      + '<p><span class="badge ' + st[0] + '">' + st[1] + '</span></p></div>';
+  }).join('');
+  return vhead('兑换物品', '可兑换物品以俱乐部当期核定为准', '')
+    + (s && !s.eligible ? '<div class="notice warn">你暂不具备兑换资格：' + esc(s.reasons.join('；')) + '。满足后可向理事会提交兑换申请。</div>' : '')
+    + '<div class="gifts">' + (cards || '<p class="empty">暂无物品</p>') + '</div>'
+    + '<p class="hint" style="margin-top:14px">兑换由理事会核定，核定后扣除积分，10 个工作日内发放。积分不兑现、不找零、不转让。</p>';
+}
+
+/* ============ 我的账号 ============ */
+function vMe(){
+  var a = ACCS[SESS.u];
+  if(!a) return '<p class="empty">账号不存在</p>';
+  var m = a.member_id ? DB.members[a.member_id] : null;
+  var s = m ? statsOf(m) : null;
+  return vhead('我的账号', '查看绑定信息、修改密码', '')
+    + (a.def ? '<div class="notice warn">当前仍在使用默认密码，建议立即修改，避免他人用初始密码登录。</div>' : '')
+    + '<div class="grid2">'
+    + '<section class="panel"><div class="phead"><h3>账号信息</h3></div><dl class="dl">'
+    + '<div><dt>登录账号</dt><dd>' + esc(a.u) + '</dd></div>'
+    + '<div><dt>名称</dt><dd style="font-family:var(--sans)">' + esc(a.name) + '</dd></div>'
+    + '<div><dt>角色</dt><dd style="font-family:var(--sans)">' + ROLE_NAME[a.role] + '</dd></div>'
+    + '<div><dt>绑定手机号</dt><dd>' + esc(mask(a.phone) || '未绑定') + '</dd></div>'
+    + (s ? '<div><dt>会员编号</dt><dd>' + esc(s.m.id) + '</dd></div><div><dt>可用积分</dt><dd>' + p1(s.available) + '</dd></div>' : '')
+    + '</dl>'
+    + '<p class="hint" style="margin-top:14px">忘记密码时，可在登录页用绑定手机号接收验证码重置。</p></section>'
+    + '<section class="panel"><div class="phead"><h3>修改密码</h3></div>'
+    + '<form id="formPw" class="form">'
+    + '<label class="field">当前密码<input type="password" name="old" required autocomplete="current-password"></label>'
+    + '<label class="field">新密码（至少 6 位）<input type="password" name="n1" required minlength="6" autocomplete="new-password"></label>'
+    + '<label class="field">确认新密码<input type="password" name="n2" required minlength="6" autocomplete="new-password"></label>'
+    + '<div class="row" style="justify-content:flex-end"><button class="btn-accent" type="submit">保存新密码</button></div>'
+    + '</form></section>'
+    + '</div>';
+}
+function submitPw(f){
+  var a = ACCS[SESS.u];
+  var oldp = f.elements.old.value, n1 = f.elements.n1.value, n2 = f.elements.n2.value;
+  if(!a) return;
+  if(a.hash !== pwHash(a.u, oldp)){ toast('当前密码不正确','bad'); return; }
+  if(n1.length < 6){ toast('新密码至少 6 位','bad'); return; }
+  if(n1 !== n2){ toast('两次输入的新密码不一致','bad'); return; }
+  a.hash = pwHash(a.u, n1); a.def = false; a.updated = todayStr();
+  logAct('修改密码', a.u + ' 修改了登录密码');
+  saveAccs(); render();
+  toast('密码已更新','ok');
+}
+
+/* ============ 忘记密码 ============ */
+function fpOpen(){
+  FP.acc = null; FP.code = null; FP.exp = 0; FP.tries = 0;
+  $('fpBody').innerHTML = '<form id="formFp1" class="form" novalidate>'
+    + '<label class="field">登录账号<input type="text" name="u" required placeholder="admin / audit / 会员编号"></label>'
+    + '<p class="err" id="fpErr" hidden></p>'
+    + '<div class="row" style="justify-content:flex-end"><button class="btn" type="button" data-act="close-fp">取消</button><button class="btn-accent" type="submit">下一步</button></div>'
+    + '</form>';
+  openFp();
+}
+function fpStep1(f){
+  var u = f.elements.u.value.trim();
+  var a = findAcc(u);
+  var err = $('fpErr');
+  if(!a){ err.textContent = '账号不存在'; err.hidden = false; return; }
+  if(!a.phone){ err.textContent = '该账号未绑定手机号，请联系管理员重置'; err.hidden = false; return; }
+  FP.acc = a; FP.code = null; FP.tries = 0;
+  $('fpBody').innerHTML = '<div class="form">'
+    + '<p class="hint">账号 <b>' + esc(a.u) + '</b> 绑定的手机号：<b class="mono">' + esc(mask(a.phone)) + '</b></p>'
+    + '<label class="field">验证码<input type="text" name="code" inputmode="numeric" maxlength="6" placeholder="6 位数字" id="fpCode"></label>'
+    + '<p class="hint" id="fpTip">点击下方「发送验证码」获取短信验证码。</p>'
+    + '<p class="err" id="fpErr2" hidden></p>'
+    + '<label class="field">新密码（至少 6 位）<input type="password" name="n1" minlength="6"></label>'
+    + '<label class="field">确认新密码<input type="password" name="n2" minlength="6"></label>'
+    + '<div class="row" style="justify-content:space-between"><button class="btn" type="button" id="fpSend">发送验证码</button>'
+    + '<button class="btn-accent" type="button" id="fpDo">重置密码</button></div>'
+    + '</div>';
+}
+function fpSend(){
+  if(!FP.acc) return;
+  var btn = $('fpSend');
+  if(btn && btn.disabled) return;
+  FP.code = String(Math.floor(100000 + Math.random() * 900000));
+  FP.exp = Date.now() + 5 * 60 * 1000;
+  FP.tries = 0;
+  var tip = $('fpTip');
+  if(tip){
+    tip.innerHTML = '验证码已发送至 <b class="mono">' + esc(mask(FP.acc.phone)) + '</b>，5 分钟内有效。'
+      + '<br><span class="dim">演示环境无短信通道，本次验证码为 </span><b class="mono" style="color:var(--copper);letter-spacing:.14em">' + FP.code + '</b>';
+  }
+  if(btn){
+    var left = 60;
+    btn.disabled = true;
+    var t = setInterval(function(){
+      left--;
+      btn.textContent = left + 's 后重发';
+      if(left <= 0){ clearInterval(t); btn.disabled = false; btn.textContent = '重新发送'; }
+    }, 1000);
+  }
+  toast('验证码已生成（演示环境直接显示）','ok');
+}
+function fpDo(){
+  var err = $('fpErr2');
+  function fail(msg){ if(err){ err.textContent = msg; err.hidden = false; } toast(msg,'bad'); }
+  if(!FP.code){ fail('请先发送验证码'); return; }
+  if(Date.now() > FP.exp){ fail('验证码已过期，请重新发送'); return; }
+  if(FP.tries >= 3){ fail('验证次数过多，请重新发送验证码'); return; }
+  var dlg = $('fpDlg');
+  var codeEl = dlg.querySelector('#fpCode');
+  var code = codeEl ? String(codeEl.value || '').trim() : '';
+  var n1 = dlg.querySelector('input[name="n1"]');
+  var n2 = dlg.querySelector('input[name="n2"]');
+  if(code !== FP.code){
+    FP.tries++;
+    fail('验证码不正确（还可尝试 ' + (3 - FP.tries) + ' 次）');
+    return;
+  }
+  if(!n1 || n1.value.length < 6){ fail('新密码至少 6 位'); return; }
+  if(n1.value !== n2.value){ fail('两次输入的新密码不一致'); return; }
+  FP.acc.hash = pwHash(FP.acc.u, n1.value);
+  FP.acc.def = false;
+  FP.acc.updated = todayStr();
+  saveAccs();
+  logAct('找回密码', FP.acc.u + ' 通过手机号验证重置了密码');
+  saveDB();
+  closeFp();
+  toast('密码已重置，请用新密码登录','ok');
+  var f = $('loginForm');
+  if(f) f.elements.user.value = FP.acc.u;
+  FP.acc = null; FP.code = null;
+}
+
+/* ============ 事件 ============ */
+document.addEventListener('submit', function(e){
+  var f = e.target;
+  if(!f || !f.id) return;
+  e.preventDefault();
+  switch(f.id){
+    case 'loginForm':
+      var r = doLogin(f.elements.user.value, f.elements.pass.value);
+      if(!r.ok){ var err = $('loginErr'); err.textContent = r.msg; err.hidden = false; return; }
+      logAct('登录', r.acc.name + '（' + ROLE_NAME[r.acc.role] + '）');
+      saveDB();
+      enterApp();
+      break;
+    case 'formMember': submitMember(f); break;
+    case 'formAdj': submitAdj(f); break;
+    case 'formLedger': submitLedger(f); break;
+    case 'formRedeem': submitRedeem(f); break;
+    case 'formGift': submitGift(f); break;
+    case 'formStock': submitStock(f); break;
+    case 'formCfg': submitCfg(f); break;
+    case 'formPurge': submitPurge(f); break;
+    case 'formPw': submitPw(f); break;
+    case 'formPhone': submitPhone(f); break;
+    case 'formFp1': fpStep1(f); break;
+  }
+});
+
+document.addEventListener('click', function(e){
+  var el = e.target.closest ? e.target.closest('[data-act]') : null;
+  if(!el) return;
+  var act = el.getAttribute('data-act');
+  var id = el.getAttribute('data-id');
+  switch(act){
+    case 'tab':
+      var v = el.getAttribute('data-view');
+      var okTab = navList().some(function(i){ return i.k === v; });
+      if(!okTab){ toast('当前角色无此权限','bad'); return; }
+      UI.tab = v; render(); window.scrollTo(0,0); break;
+    case 'review-tab': UI.review = el.getAttribute('data-mode'); render(); break;
+    case 'member-open': openMember(id); break;
+    case 'member-new': memberForm(null); break;
+    case 'member-edit': memberForm(id); break;
+    case 'member-del': delMember(id); break;
+    case 'dive-handle': diveHandle(id); break;
+    case 'points-adj': pointsAdjForm(id); break;
+    case 'rd-approve': approveRd(id); break;
+    case 'rd-reject': rejectRd(id); break;
+    case 'rd-issue': issueRd(id); break;
+    case 'gift-new': giftForm(null); break;
+    case 'gift-edit': giftForm(id); break;
+    case 'gift-del': delGift(id); break;
+    case 'stock-adj': stockForm(id); break;
+    case 'ap-approve': approveAp(id); break;
+    case 'ap-reject': rejectAp(id); break;
+    case 'acc-reset': accReset(id); break;
+    case 'acc-phone': accPhone(id); break;
+    case 'imp-open': importDlg(id); break;
+    case 'imp-tpl': tplDownload(id); break;
+    case 'imp-parse': impParse(id); break;
+    case 'imp-apply': impApply(id); break;
+    case 'purge-now': purgeConfirm(); break;
+    case 'data-export': exportData(); break;
+    case 'data-reset': resetData(); break;
+    case 'close-dlg': closeDlg(); break;
+    case 'close-fp': closeFp(); break;
+  }
+});
+
+document.addEventListener('keydown', function(e){
+  if(e.key !== 'Escape') return;
+  var a = $('dlg'), b = $('fpDlg');
+  if(a && a.classList.contains('is-open')){ closeDlg(); return; }
+  if(b && b.classList.contains('is-open')){ closeFp(); }
+});
+
+document.addEventListener('input', function(e){
+  var t = e.target;
+  if(!t) return;
+  if(t.name === 'phone'){
+    var digits = String(t.value || '').replace(/\D/g, '').slice(0, 11);
+    if(digits !== t.value){ t.value = digits; }
+    return;
+  }
+  if(!t.id) return;
+  if(t.id === 'memberQ'){ UI.memberQ = t.value; UI.searchFocus = 'memberQ'; render(); return; }
+  if(t.id === 'ledgerQ'){ UI.ledgerQ = t.value; UI.searchFocus = 'ledgerQ'; render(); return; }
+  if(t.id === 'redeemPoints'){ updateRedeemCalc(); return; }
+});
+
+document.addEventListener('change', function(e){
+  var t = e.target;
+  if(!t || !t.id) return;
+  if(t.id === 'redeemMemberSel'){ UI.redeemMember = t.value; render(); return; }
+  if(t.id === 'importFile' && t.files && t.files[0]){ importData(t.files[0]); return; }
+  if(t.id === 'impFile' && t.files && t.files[0]){ impFileLoad(t.files[0]); return; }
+  if(t.id === 'formRedeem'){ return; }
+  if(t.closest && t.closest('#formRedeem')){ updateRedeemCalc(); return; }
+  if(t.closest && t.closest('#formLedger')){
+    var f = t.closest('form');
+    if(t.name === 'preset'){
+      var opt = t.options[t.selectedIndex];
+      if(opt && f && f.elements.points){ f.elements.points.value = opt.value; }
+    }
+  }
+});
+
+function updateRedeemCalc(){
+  var f = $('formRedeem');
+  if(!f) return;
+  var gsel = f.elements.gift;
+  var opt = gsel && gsel.options[gsel.selectedIndex];
+  var calc = $('redeemCalc');
+  if(!opt || !calc) return;
+  var min = num(opt.getAttribute('data-min')), max = num(opt.getAttribute('data-max'));
+  var st = UI.redeemMember ? statsOf(DB.members[UI.redeemMember]) : null;
+  var pts = num(f.elements.points.value);
+  var amt = st ? pts * st.ratio : pts * DB.config.point_value;
+  calc.innerHTML = '该物品积分区间 ' + min + '~' + max + ' 分，当前填写 <b class="mono">' + p1(pts) + '</b> 分，折算约 <b class="mono">' + money(amt) + '</b>。'
+    + (pts < min || pts > max ? ' <span style="color:var(--danger)">超出区间，无法提交</span>' : '');
+}
+
+$('logoutBtn').addEventListener('click', logout);
+$('forgotBtn').addEventListener('click', fpOpen);
+document.addEventListener('click', function(e){
+  if(e.target && e.target.id === 'fpSend'){ fpSend(); }
+  if(e.target && e.target.id === 'fpDo'){ fpDo(); }
+});
+
+/* ============ 启动 ============ */
+function boot(){
+  loadAccs();
+  loadDB();
+  syncMemberAccounts();
+  var s = loadSess();
+  if(s){
+    SESS = s;
+    var a = ACCS[s.u];
+    if(a && a.role === 'member' && !DB.members[a.member_id]){ SESS = null; showLogin(); return; }
+    enterApp();
+  } else {
+    showLogin();
+  }
+}
+boot();
+})();
+</script>
+</body>
+</html>
